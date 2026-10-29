@@ -1,6 +1,24 @@
+# ビルドの出力
+dist/
+# Astroが生成する型
+.astro/
+
+# 依存パッケージ
+node_modules/
+
+# ログ
+npm-debug.log*
+
+# 環境変数
+.env
+.env.production
+
 # Claude Codeの個人設定と認証情報
 .claude/settings.local.json
 .claude/.credentials.json
+
+# エディタ
+.idea/
 
 # macOS
 .DS_Store
