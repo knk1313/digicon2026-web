@@ -1,0 +1,6 @@
+# Claude Codeの個人設定と認証情報
+.claude/settings.local.json
+.claude/.credentials.json
+
+# macOS
+.DS_Store
