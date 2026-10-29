@@ -8,6 +8,7 @@
 | --- | --- |
 | フレームワーク | Astro |
 | UIコンポーネント | React |
+| スタイル | Tailwind CSS |
 | 3D表現 | React Three Fiber（Three.js） |
 | スクロール | Lenis |
 | 作品の埋め込み | iframe |
