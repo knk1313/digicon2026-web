@@ -1,0 +1,21 @@
+---
+// ナビの札。PC では最初の画面の右上に吊る。スマホではページの最上部の行になる
+const items = [
+	{ href: '#theme', label: 'コンセプト' },
+	{ href: '#works', label: '作品' },
+	{ href: '#info', label: 'アクセス' },
+	{ href: '#archive', label: 'アーカイブ' },
+];
+---
+
+<nav aria-label="ページ内の移動" class="plate absolute top-[66px] right-[210px] flex items-center gap-10 px-4 pt-4 pb-2.5 max-md:hidden" data-hang="0.15,0.85">
+	<span class="font-label text-[11px] font-bold tracking-wider">DIGICON 2026</span>
+	<ul class="flex gap-7 text-[13px]">
+		{items.map((i) => <li><a href={i.href}>{i.label}</a></li>)}
+	</ul>
+</nav>
+<!-- 右上はステートメントのボタンが吊られるので、行は左に寄せる -->
+<div class="hidden max-md:flex absolute top-[14px] left-5 items-center gap-6 font-label text-[11px] font-bold">
+	<span>DIGICON 2026</span>
+	<a href="#works" class="font-body font-normal text-[13px]">メニュー</a>
+</div>

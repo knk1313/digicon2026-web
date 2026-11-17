@@ -1,0 +1,63 @@
+---
+// 吊られたタイトル（仮）。WP1 で HangingTitle の island に置き換える。
+// 3段・文字ごとに1本のワイヤー。読点はワイヤーなし（docs/design/rules.md の ①）
+const rows = ['つなぐ、', 'かわる、', 'うまれる'];
+const lit = ['var(--color-tsunagu)', 'var(--color-kawaru)', 'var(--color-umareru)'];
+---
+
+<div class="hang-title" aria-hidden="true">
+	{
+		rows.map((row, r) =>
+			[...row].map((ch, k) => (
+				<span
+					class="hang-title__letter"
+					style={`--r:${r};--k:${k}`}
+					data-hang={ch === '、' ? undefined : '0.5'}
+					data-hang-kind="ring"
+					data-hang-peg="62"
+					data-hang-lit={lit[r]}
+				>
+					{ch}
+				</span>
+			)),
+		)
+	}
+</div>
+
+<style>
+	/* 値は docs/design/tokens.md の「タイトルの配置」 */
+	.hang-title {
+		--x0: 84px;
+		--y0: 82px;
+		--adv: 102px;
+		--roff: 34px;
+		--dy: 124px;
+		--size: 96px;
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		/* 下の段へのワイヤーが上の段の文字の後ろを通るよう、ワイヤーの層（z-10）より前に出す */
+		z-index: 20;
+	}
+	.hang-title__letter {
+		position: absolute;
+		left: calc(var(--x0) + var(--r) * var(--roff) + var(--k) * var(--adv));
+		top: calc(var(--y0) + var(--r) * var(--dy));
+		width: var(--adv);
+		text-align: center;
+		font-family: var(--font-display);
+		font-weight: 900;
+		font-size: var(--size);
+		line-height: 1;
+	}
+	@media (max-width: 767px) {
+		.hang-title {
+			--x0: 20px;
+			--y0: 92px;
+			--adv: 66px;
+			--roff: 22px;
+			--dy: 80px;
+			--size: 60px;
+		}
+	}
+</style>

@@ -1,0 +1,20 @@
+---
+// 節。範囲の線と床の線は global.css の [data-section] で描く
+interface Props {
+	/** 節の名前（hero、works など）。床を探すときの目印 */
+	name: string;
+	/** ページ内リンクの行き先 */
+	id?: string;
+	/** 見出し（読み上げ用。見た目の見出しは中に置く） */
+	label?: string;
+	/** 既定の余白を付けない（最初の画面など、中で自由に配置するとき） */
+	flush?: boolean;
+	class?: string;
+}
+const { name, id, label, flush = false, class: className = '' } = Astro.props;
+const pad = 'px-[60px] pt-[96px] pb-[84px] max-md:px-[26px] max-md:pt-[72px] max-md:pb-[56px]';
+---
+
+<section data-section={name} id={id} aria-label={label} class:list={[!flush && pad, className]}>
+	<slot />
+</section>

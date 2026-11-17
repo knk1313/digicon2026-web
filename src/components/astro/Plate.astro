@@ -1,0 +1,14 @@
+---
+// 札。上端近くの孔から、板の孔のペグにワイヤーで吊られる（描くのは HangLayer）
+interface Props {
+	/** 吊られる側の孔の位置（幅に対する割合）。既定は 18% と 82% */
+	hang?: number[];
+	class?: string;
+	as?: 'div' | 'article' | 'aside';
+}
+const { hang = [0.18, 0.82], class: className = '', as: Tag = 'div' } = Astro.props;
+---
+
+<Tag class:list={['plate', className]} data-hang={hang.join(',')}>
+	<slot />
+</Tag>
