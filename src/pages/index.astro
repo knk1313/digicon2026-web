@@ -1,7 +1,127 @@
 ---
+// トップページ。節の順番と中身は docs/design/rules.md の「節の構成」
 import BaseLayout from '../layouts/BaseLayout.astro';
+import Section from '../components/astro/Section.astro';
+import Plate from '../components/astro/Plate.astro';
+import Tape from '../components/astro/Tape.astro';
+import NavPlate from '../components/astro/NavPlate.astro';
+import HangingTitle from '../components/react/HangingTitle';
+import HangLayer from '../components/react/HangLayer';
+import StatementButton from '../components/react/StatementButton';
+import StatementMobile from '../components/react/StatementMobile';
+import WorksBoard from '../components/react/WorksBoard';
+import WorkDetail from '../components/react/WorkDetail';
+import { site, allCategories, formatPeriod, splitStatement } from '../lib/data';
+
+const period = formatPeriod(site.period);
+const categories = allCategories(site.works);
+const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 ---
 
-<BaseLayout>
-	<main></main>
+<BaseLayout title={site.title}>
+	<main data-board class="relative overflow-hidden bg-board text-ink font-body">
+		<!-- ① 最初の画面 -->
+		<!--
+			タイトル（文字は絶対配置で、下端が 450px ほど）の下に、2 枚の札を流れで並べる。
+			幅が足りなければ開催情報の札は次の行へ回り、右に寄ったまま（札どうしが重ならない）
+		-->
+		<Section name="hero" label="最初の画面" flush class="relative flex flex-wrap items-start gap-x-12 gap-y-10 min-h-[826px] px-[80px] pt-[540px] pb-[110px] max-md:flex-col max-md:flex-nowrap max-md:gap-y-14 max-md:min-h-0 max-md:px-[26px] max-md:pt-[372px] max-md:pb-[190px]">
+			<h1 class="sr-only">{site.title} つなぐ、かわる、うまれる</h1>
+			<NavPlate />
+			<HangingTitle client:only="react" />
+
+			<Plate class="px-6 pt-7 pb-5">
+				<Tape>ディジタルコンテンツ表現実習 2026年度 制作展</Tape>
+				<p class="mt-3 text-[17px] font-medium max-md:text-[15px]">メディアを通じて、新しい関係と世界をつくる</p>
+			</Plate>
+
+			<Plate class="ml-auto px-7 pt-8 pb-6 text-right max-md:ml-0 max-md:text-left">
+				<p class="font-display text-[clamp(40px,5vw,64px)] font-black leading-none tracking-tight whitespace-nowrap max-md:text-[27px]">{period}</p>
+				<p class="mt-4 text-[22px] font-medium max-md:text-[16px]">{site.venue}</p>
+				<p class="mt-2 font-label text-[13px] text-mute">時間・X アカウント（未定）</p>
+			</Plate>
+		</Section>
+
+		<!-- ② 作品 -->
+		<Section name="works" id="works" label="作品">
+			<Plate class="inline-block px-6 pt-7 pb-5">
+				<Tape>01 — 作品</Tape>
+				<h2 class="mt-3 font-display text-[40px] font-black leading-none max-md:text-[30px]">作品</h2>
+				<p class="mt-3 max-w-[34em] text-[14px] text-mute">カテゴリーどうしをケーブルで結ぶと、両方に当てはまる作品だけが残ります。</p>
+			</Plate>
+
+			<!-- カテゴリーの面と作品カード（WP3）。HTML にも出す（client:load）ので、JS なしでも作品一覧が読める -->
+			<WorksBoard client:load works={site.works} categories={categories} />
+		</Section>
+
+		<!-- ③ テーマ（ステートメントへの再入口） -->
+		<Section name="theme" id="theme" label="テーマ">
+			<Plate class="max-w-[640px] px-8 pt-9 pb-7 max-md:px-5">
+				<Tape>02 — テーマ</Tape>
+				<h2 class="mt-3 font-display text-[40px] font-black leading-tight max-md:text-[28px]">{site.theme.title}</h2>
+				<div class="mt-6 font-statement text-[17px] leading-[2.1] max-md:text-[15px]">
+					{firstStanza.map((line) => <p>{line.join('　')}</p>)}
+				</div>
+				<button type="button" data-open-statement class="chip mt-7 cursor-pointer">ステートメントを読む →</button>
+			</Plate>
+		</Section>
+
+		<!-- ④ 開催情報・アクセス -->
+		<Section name="info" id="info" label="開催情報・アクセス">
+			<div class="grid grid-cols-[1.1fr_1fr] gap-x-[40px] gap-y-[84px] max-md:grid-cols-1 max-md:gap-y-[64px]">
+				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
+					<Tape>03 — 開催情報</Tape>
+					<p class="mt-4 font-display text-[48px] font-black leading-none max-md:text-[30px]">{period}</p>
+					<p class="mt-3 text-[20px] font-medium max-md:text-[16px]">{site.venue}</p>
+				</Plate>
+				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
+					<dl class="grid grid-cols-[6em_1fr] gap-y-3 text-[14px]">
+						<dt class="font-label text-mute">会期</dt><dd>{period}</dd>
+						<dt class="font-label text-mute">会場</dt><dd>{site.venue}</dd>
+						<dt class="font-label text-mute">時間</dt><dd>未定</dd>
+						<dt class="font-label text-mute">行き方</dt><dd>未定</dd>
+						<dt class="font-label text-mute">お知らせ</dt><dd>X アカウント（未定）</dd>
+					</dl>
+				</Plate>
+				<Plate class="col-span-full px-4 pt-7 pb-4">
+					<div class="grid h-[280px] place-items-center rounded-[4px] border border-hair font-label text-[13px] text-mute max-md:h-[200px]">地図（未定）</div>
+				</Plate>
+			</div>
+		</Section>
+
+		<!-- ⑤ アーカイブとクレジット -->
+		<Section name="archive" id="archive" label="アーカイブとクレジット">
+			<div class="grid grid-cols-2 gap-x-[40px] gap-y-[84px] max-md:grid-cols-1 max-md:gap-y-[64px]">
+				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
+					<Tape>04 — アーカイブ</Tape>
+					<ul class="mt-5 flex flex-wrap gap-2">
+						{['2025', '2024', '2023', '2022'].map((y) => <li><span class="chip">{y} →</span></li>)}
+					</ul>
+				</Plate>
+				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
+					<Tape>クレジット</Tape>
+					<p class="mt-5 text-[14px] text-mute">サイト制作：（未定）</p>
+				</Plate>
+			</div>
+		</Section>
+
+		<footer class="px-[60px] pt-6 pb-10 font-label text-[12px] text-mute max-md:px-[26px]">
+			© 2026 筑波大学 情報メディア創成学類 ディジタルコンテンツ表現実習
+		</footer>
+
+		<HangLayer client:only="react" />
+	</main>
+	<StatementButton client:only="react" />
+	<StatementMobile client:only="react" />
+	<!-- 作品概要のパネル（WP4）。digicon:work-open で開く -->
+	<WorkDetail client:only="react" />
+
+	<script>
+		// 「ステートメントを読む」などから、シートを開く合図を出す
+		import { EVENTS, emit } from '../lib/events';
+		document.addEventListener('click', (e) => {
+			const t = (e.target as Element | null)?.closest('[data-open-statement]');
+			if (t) emit(EVENTS.statementOpen);
+		});
+	</script>
 </BaseLayout>

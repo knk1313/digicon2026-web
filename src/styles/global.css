@@ -1,5 +1,159 @@
 @import "tailwindcss";
 
+/* 値の出どころは docs/design/tokens.md（Figma の「案F4」）。名前を変えるときは文書も直す */
 @theme {
-  /* ブランドの色・書体・イージングはここにまとめる */
+  --color-board: #ecedea;
+  --color-hole: #cdd1cd;
+  --color-panel: #ffffff;
+  --color-ink: #151718;
+  --color-mute: #5e6560;
+  --color-hair: #d6d9d5;
+  --color-wire: #2a2d2f;
+  --color-wire-loose: #6a7073;
+  --color-peg: #1a1c1d;
+  --color-section-line: #bfc3be;
+  --color-tsunagu: #f2b705;
+  --color-kawaru: #1f6fd6;
+  --color-umareru: #e5392b;
+  --color-kyoen: #1f9a5a;
+
+  --font-display: "Murecho", "IBM Plex Sans JP", sans-serif;
+  --font-body: "IBM Plex Sans JP", sans-serif;
+  --font-label: "M PLUS 1 Code", "IBM Plex Sans JP", monospace;
+  --font-statement: "Shippori Mincho", serif;
+}
+
+/* 有孔ボードの格子。lib/board.ts の値と必ずそろえる */
+:root {
+  --board-step: 34px;
+  --board-ox: 33px;
+  --board-oy: 16px;
+  --board-hole: 2.5px;
+}
+@media (max-width: 767px) {
+  :root {
+    --board-step: 22px;
+    --board-ox: 9px;
+    --board-oy: 16px;
+    --board-hole: 2px;
+  }
+}
+
+html {
+  background: var(--color-board);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* ページ全体の有孔ボード。孔の中心が (ox + step*n, oy + step*m) に来るよう背景をずらす */
+[data-board] {
+  position: relative;
+  background-color: var(--color-board);
+  background-image: radial-gradient(circle, var(--color-hole) var(--board-hole), transparent calc(var(--board-hole) + 0.6px));
+  background-size: var(--board-step) var(--board-step);
+  background-position: calc(var(--board-ox) - var(--board-step) / 2) calc(var(--board-oy) - var(--board-step) / 2);
+}
+
+/* 節。範囲の線は引かない。下端の棚（.shelf）が、落ちたものの床になる */
+[data-section] {
+  position: relative;
+}
+
+/* 棚：節の下端に吊った横長の札。.plate と合わせて使う（components.md の Shelf） */
+.shelf {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 14px;
+  height: 18px;
+}
+@media (max-width: 767px) {
+  .shelf {
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
+    height: 16px;
+  }
+}
+
+/* 部品のクラス。Tailwind のユーティリティ（absolute など）で上書きできるよう components 層に置く */
+@layer components {
+/* 札：吊られる白い板 */
+.plate {
+  position: relative;
+  background: var(--color-panel);
+  border: 2px solid var(--color-ink);
+  border-radius: 6px;
+}
+
+/* ラベル（テープ） */
+.tape {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 2px;
+  background: var(--color-ink);
+  color: var(--color-panel);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+}
+
+/* 丸い枠のボタン */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  padding: 6px 14px;
+  border: 1.5px solid var(--color-ink);
+  border-radius: 999px;
+  background: var(--color-panel);
+  font-family: var(--font-label);
+  font-size: 12px;
+}
+}
+
+/* 吊り具（ペグ・ワイヤー・吊られる側の孔）のホバー。どこで吊られていて、どこをつまめるかの手がかり。
+   札は HangLayer の [data-hang-g] に .hook-hover、タイトルは個々の要素に .hook-hover が付く */
+[data-hang-g] [data-hook],
+.hook-hover {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: stroke 0.15s, stroke-width 0.15s;
+}
+.hook-hover [data-hook="peg"],
+.hook-hover [data-hook="end"],
+circle.hook-hover,
+ellipse.hook-hover {
+  animation: hook-pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.hook-hover [data-hook="wire"],
+path.hook-hover,
+line.hook-hover,
+polyline.hook-hover {
+  stroke: var(--color-ink);
+  stroke-width: 2.2px;
+}
+/* タップで選んだペグ（次に押した孔へ挿し替える）は脈打つ */
+.hook-selected [data-hook="peg"] {
+  animation: hook-pulse 1s ease-in-out infinite;
+}
+@keyframes hook-pop {
+  0% { transform: scale(1); }
+  60% { transform: scale(1.6); }
+  100% { transform: scale(1.35); }
+}
+@keyframes hook-pulse {
+  0%, 100% { transform: scale(1.2); }
+  50% { transform: scale(1.65); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hook-hover [data-hook="peg"],
+  .hook-hover [data-hook="end"],
+  circle.hook-hover,
+  ellipse.hook-hover,
+  .hook-selected [data-hook="peg"] {
+    animation: none;
+    transform: scale(1.35);
+  }
 }

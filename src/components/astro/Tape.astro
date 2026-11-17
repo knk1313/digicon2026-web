@@ -1,0 +1,9 @@
+---
+// ラベル（ダイモ風のテープ）
+interface Props {
+	class?: string;
+}
+const { class: className = '' } = Astro.props;
+---
+
+<span class:list={['tape', className]}><slot /></span>

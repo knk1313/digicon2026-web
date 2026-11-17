@@ -10,5 +10,6 @@
 | UIコンポーネント | React |
 | スタイル | Tailwind CSS |
 | 3D表現 | React Three Fiber（Three.js） |
+| 2D物理（吊る・落ちる・ぶつかる） | planck.js（Box2D） |
 | スクロール | Lenis |
 | 作品の埋め込み | iframe |
