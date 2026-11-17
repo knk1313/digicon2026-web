@@ -17,8 +17,7 @@ CSS では `src/styles/global.css` の `@theme` に入れる。変数名は下�
 | `--color-wire` | `#2A2D2F` | 吊っているワイヤー |
 | `--color-wire-loose` | `#6A7073` | 何も吊っていないワイヤー |
 | `--color-peg` | `#1A1C1D` | ペグの頭（消えている） |
-| `--color-section-line` | `#BFC3BE` | 節の範囲の線 |
-| `--color-section-floor` | `#8B908D` | 節の床の線 |
+| `--color-section-line` | `#BFC3BE` | ステートメントのシートと句の札の枠線（もとは節の範囲の線。範囲の線はやめた） |
 | `--color-tsunagu` | `#F2B705` | 段階色：つなぐ（タイトル1段目、結んだケーブル） |
 | `--color-kawaru` | `#1F6FD6` | 段階色：かわる（タイトル2段目） |
 | `--color-umareru` | `#E5392B` | 段階色：うまれる（タイトル3段目） |
@@ -81,6 +80,6 @@ CSS では `src/styles/global.css` の `@theme` に入れる。変数名は下�
 | 札の枠線 | 2px `--color-ink`、角丸 6px |
 | ワイヤー | 1.5px（スマホ 1.2px） |
 | 吊られる側の孔（ハトメ） | 直径 9px（スマホ 7px）、地の色で塗り、縁 1.5px `--color-ink`。札の上端から 9px 下 |
-| 節の範囲の線 | 1.5px、角丸 12px、画面の左右から 24px 内側（スマホ 10px） |
-| 節の床の線 | 3px（スマホ 2.5px）、節の下端から 12px 上 |
+| 節の範囲の線・床の線 | 引かない（下端の棚に置き換えた） |
+| 節の下端の棚 | 横長の札。左右 28px 内側（スマホ 12px）、下端から 14px（スマホ 10px）、高さ 18px（スマホ 16px） |
 | ラベル（テープ） | 塗り `--color-ink`、文字 `--color-panel`、角丸 2px、上下 3px・左右 8px |

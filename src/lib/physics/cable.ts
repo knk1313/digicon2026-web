@@ -143,6 +143,48 @@ export class Cable {
 	}
 }
 
+/**
+ * 吊るワイヤーの見た目（札・文字・ポップアップ）。少したるませ、減衰を弱くして、
+ * 吊ったものが揺れると波が走り、なでると大きく揺れるようにする
+ */
+export const WIRE_LOOK = {
+	/** 張っているときも、この倍率だけ長くして少したるませる */
+	slack: 1.05,
+	/** 速さの残り方（1 に近いほど長く揺れる） */
+	damp: 0.975,
+	grav: 0.45,
+	iters: 8,
+	/** マウスでなでたときに押しのける半径（px） */
+	push: 22,
+	/** 長さに応じた区間の数 */
+	seg: (len: number) => Math.max(6, Math.min(18, Math.round(len / 12))),
+};
+
+/** 吊るワイヤーの見た目を作る。a はペグ、b は吊られる側の孔（どちらも毎フレーム読む） */
+export function wireCable(a: () => Pt, b: () => Pt, len: number): Cable {
+	const c = new Cable(a, b, { seg: WIRE_LOOK.seg(len), grav: WIRE_LOOK.grav, damp: WIRE_LOOK.damp, iters: WIRE_LOOK.iters });
+	c.relen(len * WIRE_LOOK.slack);
+	c.settle(80);
+	return c;
+}
+
+/**
+ * 吊るワイヤーの見た目を 1 フレーム進める。rest は張ったときの長さ（ロープの長さ）、ptr はなでている点。
+ * 動いていれば true
+ */
+export function stepWire(c: Cable, rest: number, ptr: Pt | null, loose = 1): boolean {
+	const A = c.a();
+	const B = c.b ? c.b() : c.end;
+	const d = Math.hypot(B.x - A.x, B.y - A.y);
+	c.relen(Math.max(rest * WIRE_LOOK.slack, d * 1.02) * loose);
+	const before = c.mid();
+	const bx = before.x;
+	const by = before.y;
+	c.step(ptr ? { x: ptr.x, y: ptr.y, r: WIRE_LOOK.push } : undefined);
+	const after = c.mid();
+	return Math.abs(after.x - bx) + Math.abs(after.y - by) > 0.05;
+}
+
 /** 点の列を、中点を通る 2 次ベジェでつないだ SVG の path の d（canvas 版の path() と同じ曲線） */
 export function smoothPath(P: readonly Pt[]): string {
 	if (P.length < 2) return '';

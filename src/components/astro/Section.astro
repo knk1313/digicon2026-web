@@ -1,7 +1,8 @@
 ---
-// 節。範囲の線と床の線は global.css の [data-section] で描く
+// 節。下端に横長の棚（札）を吊って置き、落ちたもの（タイトルの文字など）はその上に載る。
+// 節の範囲の線はもう引かない。棚も、ほかの札と同じく板の孔のペグから吊られた物体（HangLayer が動かす）
 interface Props {
-	/** 節の名前（hero、works など）。床を探すときの目印 */
+	/** 節の名前（hero、works など） */
 	name: string;
 	/** ページ内リンクの行き先 */
 	id?: string;
@@ -12,9 +13,11 @@ interface Props {
 	class?: string;
 }
 const { name, id, label, flush = false, class: className = '' } = Astro.props;
-const pad = 'px-[60px] pt-[96px] pb-[84px] max-md:px-[26px] max-md:pt-[72px] max-md:pb-[56px]';
+// 下の余白は、棚（下端から 14px、高さ 18px）とその上のペグ・ワイヤーが中身に重ならない分
+const pad = 'px-[60px] pt-[96px] pb-[124px] max-md:px-[26px] max-md:pt-[72px] max-md:pb-[88px]';
 ---
 
 <section data-section={name} id={id} aria-label={label} class:list={[!flush && pad, className]}>
 	<slot />
+	<div class="shelf plate" data-hang="0.04,0.5,0.96" data-shelf aria-hidden="true"></div>
 </section>

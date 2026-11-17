@@ -76,7 +76,7 @@ export default function WorkDetail() {
 		if (scrimRef.current) scrimRef.current.style.opacity = String(scrimRef01.current);
 		if (!card) return;
 		const o = card.offset;
-		if (panelRef.current) panelRef.current.style.transform = `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0)`;
+		if (panelRef.current) panelRef.current.style.transform = `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0) rotate(${card.angle.toFixed(4)}rad)`;
 		const svg = svgRef.current;
 		if (!svg) return;
 		const strings = card.strings();
@@ -138,10 +138,13 @@ export default function WorkDetail() {
 		// 吊り方が変わったときだけ物理を作り直す（前後の作品へ移っても揺れを引き継ぐ）
 		const old = geoRef.current;
 		if (!cardRef.current || !old || old.pegY !== pegY || old.holeY !== holeY || old.xs.some((x, i) => x !== xs[i])) {
+			// 外形を渡すと、傾いて落ちてきて水平に戻る（回す中心は最初の孔）
 			const card = new PinnedCard(
 				xs.map((x) => ({ x, y: holeY })),
 				xs.map((x) => ({ x, y: pegY })),
+				{ x: left, y: top, w, h: panel.offsetHeight },
 			);
+			panel.style.transformOrigin = `${xs[0] - left}px ${holeY - top}px`;
 			if (cardRef.current && cardRef.current.phase !== 'gone') card.place();
 			cardRef.current = card;
 		}

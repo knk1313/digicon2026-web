@@ -21,18 +21,22 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 <BaseLayout title={site.title}>
 	<main data-board class="relative overflow-hidden bg-board text-ink font-body">
 		<!-- ① 最初の画面 -->
-		<Section name="hero" label="最初の画面" flush class="relative h-[826px] max-md:h-auto max-md:px-[26px] max-md:pt-[372px] max-md:pb-[190px]">
+		<!--
+			タイトル（文字は絶対配置で、下端が 450px ほど）の下に、2 枚の札を流れで並べる。
+			幅が足りなければ開催情報の札は次の行へ回り、右に寄ったまま（札どうしが重ならない）
+		-->
+		<Section name="hero" label="最初の画面" flush class="relative flex flex-wrap items-start gap-x-12 gap-y-10 min-h-[826px] px-[80px] pt-[540px] pb-[110px] max-md:flex-col max-md:flex-nowrap max-md:gap-y-14 max-md:min-h-0 max-md:px-[26px] max-md:pt-[372px] max-md:pb-[190px]">
 			<h1 class="sr-only">{site.title} つなぐ、かわる、うまれる</h1>
 			<NavPlate />
 			<HangingTitle client:only="react" />
 
-			<Plate class="absolute left-[80px] top-[540px] px-6 pt-7 pb-5 max-md:static max-md:mt-0">
+			<Plate class="px-6 pt-7 pb-5">
 				<Tape>ディジタルコンテンツ表現実習 2026年度 制作展</Tape>
 				<p class="mt-3 text-[17px] font-medium max-md:text-[15px]">メディアを通じて、新しい関係と世界をつくる</p>
 			</Plate>
 
-			<Plate class="absolute right-[80px] bottom-[64px] px-7 pt-8 pb-6 text-right max-md:static max-md:mt-14 max-md:text-left">
-				<p class="font-display text-[64px] font-black leading-none tracking-tight whitespace-nowrap max-md:text-[27px]">{period}</p>
+			<Plate class="ml-auto px-7 pt-8 pb-6 text-right max-md:ml-0 max-md:text-left">
+				<p class="font-display text-[clamp(40px,5vw,64px)] font-black leading-none tracking-tight whitespace-nowrap max-md:text-[27px]">{period}</p>
 				<p class="mt-4 text-[22px] font-medium max-md:text-[16px]">{site.venue}</p>
 				<p class="mt-2 font-label text-[13px] text-mute">時間・X アカウント（未定）</p>
 			</Plate>

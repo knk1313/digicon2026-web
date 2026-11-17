@@ -9,6 +9,7 @@ import { site, splitStatement } from '../../lib/data';
 import { EVENTS, emit, on, type StatementClosedDetail } from '../../lib/events';
 import type { Pt } from '../../lib/physics/cable';
 import { PinnedCard } from '../../lib/physics/pinned';
+import { BAR_DENSITY, BAR_THICK, HOOK_UP, MobileSim, type MBar, type MCard, type MobilePose } from '../../lib/physics/mobile-sim';
 
 // ---- 本文（連・行・句） ----
 
@@ -48,11 +49,8 @@ interface Cfg {
 	lens: number[];
 }
 
-const DESKTOP: Cfg = { pad: 18, top: 56, gap: 5, ext: 10, threadGap: 22, bottom: 24, lens: [10, 24, 14, 32, 18, 26, 8, 20] };
-const MOBILE: Cfg = { pad: 12, top: 46, gap: 5, ext: 8, threadGap: 13, bottom: 14, lens: [6, 13, 9, 17, 11, 15, 4, 12] };
-
-/** 横棒の左寄せの量（余った幅に対する割合）。棒ごとに少しずつずらして、手で吊った感じにする */
-const OFFS = [0.0, 0.16, 0.3, 0.48, 0.1, 0.38];
+const DESKTOP: Cfg = { pad: 26, top: 72, gap: 8, ext: 14, threadGap: 30, bottom: 34, lens: [14, 32, 20, 42, 24, 34, 12, 28] };
+const MOBILE: Cfg = { pad: 14, top: 52, gap: 6, ext: 10, threadGap: 18, bottom: 20, lens: [8, 17, 12, 22, 14, 19, 6, 15] };
 
 /** 連と連をつなぐ糸の色（黄→青→赤）。足りなければ最後の色を使う */
 const STAGE = ['var(--color-tsunagu)', 'var(--color-kawaru)', 'var(--color-umareru)'];
@@ -64,20 +62,11 @@ interface Size {
 	w: number;
 	h: number;
 }
-interface PlacedCard {
-	id: number;
-	x: number;
-	y: number;
-	w: number;
-	h: number;
+interface PlacedCard extends MCard {
 	/** 吊っている横棒の高さ（糸の上端） */
 	barY: number;
 }
-interface Bar {
-	x1: number;
-	x2: number;
-	y: number;
-}
+type Bar = MBar;
 interface Thread {
 	x: number;
 	y1: number;
@@ -87,6 +76,7 @@ interface Thread {
 	knot: boolean;
 }
 interface Mobile {
+	anchor: Pt;
 	cards: PlacedCard[];
 	bars: Bar[];
 	threads: Thread[];
@@ -96,30 +86,26 @@ interface Mobile {
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
 
 /**
- * 句を横棒に並べる。各連は1本の横棒に吊り、収まらない句は次の棒へ送る。
- * 次の棒は、前の棒でいちばん長く垂れた札から吊る
+ * 句を横棒に並べて、本物のモビールのように釣り合わせる。
+ * ・各連は1本の横棒に吊り、収まらない句は次の棒へ送る（縦の並びは上から順）
+ * ・次の棒は、前の棒の真ん中にいちばん近い札（運び手）の下端から吊る
+ * ・横の位置は下の棒から決める：棒ごとに、ぶら下がるもの全部（札と、その先の棒と札）の重さが釣り合う点（吊り点）を求め、
+ *   その吊り点が上の運び手の真下に来るよう上の棒を置く。だから糸は最初からまっすぐ垂れ、全体が1本の軸のまわりにまとまる
+ * ・最後に、全体をシートの中央に寄せる
  */
 function layoutMobile(sizes: Size[], width: number, c: Cfg): Mobile {
-	const cards: PlacedCard[] = [];
-	const bars: Bar[] = [];
-	const threads: Thread[] = [];
 	const inner = width - c.pad * 2;
-	// 最初の糸はシートの上端から下りる（ラベルと閉じるボタンのあいだ）
-	let prevX = c.pad + inner * 0.4;
-	let prevBottom = 0;
-	let y = c.top;
-	let gi = 0;
-
+	// 1. 棒ごとの句（連・棒の中の番号つき）
+	const groups: { ids: number[]; si: number; k: number }[] = [];
 	STANZA_IDS.forEach((ids, si) => {
-		// 横棒1本に収まる分ずつに分ける
-		const groups: number[][] = [];
 		let cur: number[] = [];
 		let curW = 0;
+		let k = 0;
 		for (const id of ids) {
 			const w = sizes[id].w;
 			const next = cur.length ? curW + c.gap + w : w;
 			if (cur.length && next > inner - c.ext * 2) {
-				groups.push(cur);
+				groups.push({ ids: cur, si, k: k++ });
 				cur = [id];
 				curW = w;
 			} else {
@@ -127,50 +113,103 @@ function layoutMobile(sizes: Size[], width: number, c: Cfg): Mobile {
 				curW = next;
 			}
 		}
-		if (cur.length) groups.push(cur);
+		if (cur.length) groups.push({ ids: cur, si, k });
+	});
+	const n = groups.length;
 
-		groups.forEach((g, k) => {
-			const cw = g.reduce((s, id) => s + sizes[id].w, 0) + c.gap * (g.length - 1);
-			const minL = c.pad + c.ext;
-			const maxL = Math.max(minL, width - c.pad - c.ext - cw);
-			// 上から来る糸が横棒に掛かるよう、棒の位置を寄せる
-			const left = clamp(
-				minL + (maxL - minL) * OFFS[gi % OFFS.length],
-				Math.max(minL, prevX - cw - c.ext + 8),
-				Math.min(maxL, prevX + c.ext - 8),
-			);
-			const barY = y;
-			threads.push({
-				x: prevX,
-				y1: prevBottom,
-				y2: barY,
-				// 連と連のあいだだけ段階色。同じ連の中で送った棒は普通のワイヤー
-				color: k === 0 ? STAGE[Math.min(si, STAGE.length - 1)] : 'var(--color-wire)',
-				knot: gi > 0,
-			});
-			bars.push({ x1: left - c.ext, x2: left + cw + c.ext, y: barY });
-
-			let x = left;
-			let low = 0;
-			let lowB = -Infinity;
-			g.forEach((id, j) => {
-				const s = sizes[id];
-				const top = barY + c.lens[(gi * 3 + j) % c.lens.length];
-				cards.push({ id, x, y: top, w: s.w, h: s.h, barY });
-				if (top + s.h > lowB) {
-					lowB = top + s.h;
-					low = cards.length - 1;
-				}
-				x += s.w + c.gap;
-			});
-			prevX = cards[low].x + cards[low].w / 2;
-			prevBottom = lowB;
-			y = lowB + c.threadGap;
-			gi++;
+	// 2. 棒の中での札の並び（棒の左端の札の左端を 0 とした x）と、縦の位置（上から）
+	const rel = groups.map((g, gi) => {
+		let x = 0;
+		const items = g.ids.map((id, j) => {
+			const s = sizes[id];
+			const it = { id, x, w: s.w, h: s.h, len: c.lens[(gi * 3 + j) % c.lens.length] };
+			x += s.w + c.gap;
+			return it;
 		});
+		const cw = x - c.gap;
+		// 運び手：棒の真ん中にいちばん近い札（次の棒をここから吊る）
+		let carrier = 0;
+		let best = Infinity;
+		items.forEach((it, j) => {
+			const d = Math.abs(it.x + it.w / 2 - cw / 2);
+			if (d < best) {
+				best = d;
+				carrier = j;
+			}
+		});
+		return { items, cw, carrier };
+	});
+	const barYs: number[] = [];
+	let y = c.top;
+	let bottom = 0;
+	rel.forEach((r) => {
+		barYs.push(y);
+		bottom = Math.max(...r.items.map((it) => y + it.len + it.h));
+		y = bottom + c.threadGap;
 	});
 
-	return { cards, bars, threads, height: Math.ceil(prevBottom + c.bottom) };
+	// 3. 横の位置を下の棒から決める。off[g] は棒 g の札の並びの左端の x（全体の仮の座標）
+	// 横棒の 1px あたりの重さ（mobile-sim.ts の横棒と同じ）
+	const barMass = BAR_DENSITY * BAR_THICK;
+	const off: number[] = new Array(n).fill(0);
+	const hook: number[] = new Array(n).fill(0);
+	let below = 0; // 下にぶら下がる重さの合計
+	for (let gi = n - 1; gi >= 0; gi--) {
+		const r = rel[gi];
+		if (gi < n - 1) {
+			// 運び手の真ん中が、下の棒の吊り点の真下（真上）に来るように置く
+			const cr = r.items[r.carrier];
+			off[gi] = hook[gi + 1] - (cr.x + cr.w / 2);
+		}
+		let m = 0;
+		let mx = 0;
+		r.items.forEach((it, j) => {
+			const w = it.w * it.h + (j === r.carrier && gi < n - 1 ? below : 0);
+			m += w;
+			mx += w * (off[gi] + it.x + it.w / 2);
+		});
+		const barLen = r.cw + c.ext * 2;
+		const bm = barLen * barMass;
+		m += bm;
+		mx += bm * (off[gi] + r.cw / 2);
+		hook[gi] = mx / m;
+		// この棒から下の重さの合計（m には下の分がもう入っている）
+		below = m;
+	}
+
+	// 4. 全体をシートの中央へ寄せる
+	let minX = Infinity;
+	let maxX = -Infinity;
+	rel.forEach((r, gi) => {
+		minX = Math.min(minX, off[gi] - c.ext);
+		maxX = Math.max(maxX, off[gi] + r.cw + c.ext);
+	});
+	const shift = width / 2 - (minX + maxX) / 2;
+
+	const cards: PlacedCard[] = [];
+	const bars: Bar[] = [];
+	const threads: Thread[] = [];
+	rel.forEach((r, gi) => {
+		const barY = barYs[gi];
+		const left = off[gi] + shift;
+		const barIndex = bars.length;
+		const bar: Bar = { x1: left - c.ext, x2: left + r.cw + c.ext, y: barY, low: 0, hook: hook[gi] + shift };
+		bars.push(bar);
+		r.items.forEach((it, j) => {
+			cards.push({ id: it.id, x: left + it.x, y: barY + it.len, w: it.w, h: it.h, barY, bar: barIndex });
+			if (j === r.carrier) bar.low = cards.length - 1;
+		});
+		const g = groups[gi];
+		threads.push({
+			x: bar.hook,
+			y1: 0,
+			y2: barY,
+			// 連と連のあいだだけ段階色。同じ連の中で送った棒は普通のワイヤー
+			color: g.k === 0 ? STAGE[Math.min(g.si, STAGE.length - 1)] : 'var(--color-wire)',
+			knot: gi > 0,
+		});
+	});
+	return { anchor: { x: hook[0] + shift, y: 0 }, cards, bars, threads, height: Math.ceil(bottom + c.bottom) };
 }
 
 // ---- シートを吊るペグとワイヤー（画面の座標） ----
@@ -187,15 +226,22 @@ interface Geom {
 	wire: number;
 }
 
-/** シートを吊る孔の位置を、板の孔の格子に合わせて求める。off はいまのずれ（静止した位置から） */
-function measureGeom(sheet: HTMLElement, off: Pt): Geom | null {
+/** シートの静止した位置の外形（画面の座標）。傾いたり動いたりしていても、レイアウト上の位置で測る */
+function sheetRect(sheet: HTMLElement): { x: number; y: number; w: number; h: number } {
+	// シートは画面に固定した重ね合わせ（inset-0）の中の absolute なので、offset はそのまま画面の座標
+	return { x: sheet.offsetLeft, y: sheet.offsetTop, w: sheet.offsetWidth, h: sheet.offsetHeight };
+}
+
+/** シートを吊る孔の位置を、板の孔の格子に合わせて求める（静止した位置で） */
+function measureGeom(sheet: HTMLElement): Geom | null {
 	const board = document.querySelector<HTMLElement>('[data-board]');
 	if (!board) return null;
 	const b = board.getBoundingClientRect();
 	const g = gridFor(b.width);
-	const r = sheet.getBoundingClientRect();
-	const top = r.top - off.y;
-	const left = r.left - off.x;
+	const s = sheetRect(sheet);
+	const r = { width: s.w, height: s.h };
+	const top = s.y;
+	const left = s.x;
 	// ペグは、シートの上端から MIN_DROP 以上うえにある、いちばん近い孔の段
 	const row = Math.floor((top - MIN_DROP - b.top - g.oy) / g.step);
 	const pegY = b.top + g.oy + row * g.step;
@@ -243,9 +289,9 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [ta
 type Phase = 'open' | 'opening' | 'closing' | 'closed';
 
 // 札の組み方。測る札と並べる札で同じクラスを使う
-const CARD = 'absolute top-0 left-0 whitespace-nowrap border border-section-line bg-panel px-[6px] py-[2px] text-ink';
-const CARD_JA = 'font-statement text-[13px] leading-[1.6] tracking-[0.04em] max-md:py-[1px] max-md:text-[11.5px] max-md:leading-[1.55] max-md:tracking-[0.04em]';
-const CARD_LATIN = 'font-label text-[10px] font-bold leading-[1.7] max-md:text-[9px]';
+const CARD = 'absolute top-0 left-0 whitespace-nowrap border border-section-line bg-panel px-[9px] py-[3px] text-ink max-md:px-[7px]';
+const CARD_JA = 'font-statement text-[17px] leading-[1.6] tracking-[0.04em] max-md:py-[2px] max-md:text-[13.5px] max-md:leading-[1.55] max-md:tracking-[0.04em]';
+const CARD_LATIN = 'font-label text-[13px] font-bold leading-[1.7] max-md:text-[10.5px]';
 
 export default function StatementMobile() {
 	// 最初は開いた状態（docs/design/rules.md の ①）
@@ -267,6 +313,14 @@ export default function StatementMobile() {
 
 	/** シートの物理（板の孔に留めたカード） */
 	const cardRef = useRef<PinnedCard | null>(null);
+	/** モビールの物理（横棒と句の札）と、それを描く要素 */
+	const simRef = useRef<MobileSim | null>(null);
+	const threadEls = useRef<(SVGLineElement | null)[]>([]);
+	const hookEls = useRef<(SVGLineElement | null)[]>([]);
+	const knotEls = useRef<(SVGCircleElement | null)[]>([]);
+	const barEls = useRef<(SVGLineElement | null)[]>([]);
+	const stringEls = useRef<(SVGLineElement | null)[]>([]);
+	const cardEls = useRef<(HTMLSpanElement | null)[]>([]);
 	const geomRef = useRef<Geom | null>(null);
 	const animRef = useRef(0);
 	/** つかみ始めの候補（6px 動いたらつかむ） */
@@ -283,12 +337,24 @@ export default function StatementMobile() {
 	/** いまのずれ（静止した位置から） */
 	const offset = (): Pt => cardRef.current?.offset ?? { x: 0, y: 0 };
 
+	/** シートの物理を作る。外形を渡すと傾いて落ちてきて水平に戻る。回す中心は最初の孔（CSS の transform-origin も合わせる） */
+	const makeCard = (g: Geom): PinnedCard => {
+		const sheet = sheetRef.current;
+		if (!sheet) return new PinnedCard(g.grommets, g.pegs);
+		const rect = sheetRect(sheet);
+		sheet.style.transformOrigin = `${g.grommets[0].x - rect.x}px ${g.grommets[0].y - rect.y}px`;
+		return new PinnedCard(g.grommets, g.pegs, rect);
+	};
+
 	// シートのずれをシート・ワイヤー・幕に当てる（毎フレーム。React の再描画には乗せない）
 	const apply = useCallback(() => {
 		const card = cardRef.current;
 		const o = card && card.phase !== 'gone' ? card.offset : { x: 0, y: 0 };
 		const sheet = sheetRef.current;
-		if (sheet) sheet.style.transform = o.x || o.y ? `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0)` : '';
+		const a = card && card.phase !== 'gone' ? card.angle : 0;
+		if (sheet) sheet.style.transform = o.x || o.y || a ? `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0) rotate(${a.toFixed(4)}rad)` : '';
+		// シートの動き（落ちて受け止められる、振られる）を、慣性としてモビールに伝える
+		simRef.current?.setFrame(o, a);
 		const g = geomRef.current;
 		// 上に隠れているほど幕とペグを薄く
 		const p = g ? clamp(1 - Math.max(0, -o.y) / g.maxLift, 0, 1) : 1;
@@ -337,7 +403,7 @@ export default function StatementMobile() {
 			old.grommets.every((p, i) => Math.abs(p.x - g.grommets[i].x) < 0.5 && Math.abs(p.y - g.grommets[i].y) < 0.5);
 		if (same) return;
 		const prev = cardRef.current;
-		const card = new PinnedCard(g.grommets, g.pegs);
+		const card = makeCard(g);
 		if (prev && prev.phase !== 'gone') card.place();
 		else card.phase = 'gone';
 		cardRef.current = card;
@@ -374,20 +440,67 @@ export default function StatementMobile() {
 		const box = measureRef.current;
 		if (!sheet || !box || phaseRef.current === 'closed') return;
 		setMobile(window.innerWidth <= MOBILE_MAX);
+		// 札の大きさはレイアウト上の大きさで測る（シートが傾いて落ちている最中でも、見た目の外形で大きく測らないように）
 		setSizes([...box.children].map((el) => {
-			const r = (el as HTMLElement).getBoundingClientRect();
-			return { w: Math.ceil(r.width), h: Math.ceil(r.height) };
+			const e = el as HTMLElement;
+			return { w: Math.ceil(e.offsetWidth), h: Math.ceil(e.offsetHeight) };
 		}));
 		setWidth(sheet.clientWidth);
 		const top = sheet.getBoundingClientRect().top - offset().y;
 		setMaxH(Math.max(160, window.innerHeight - top - 16));
-		setGeomAndCard(measureGeom(sheet, offset()));
+		setGeomAndCard(measureGeom(sheet));
 	}, [setGeomAndCard]);
 
 	const mobileLayout = useMemo(
 		() => (sizes && width ? layoutMobile(sizes, width, mobile ? MOBILE : DESKTOP) : null),
 		[sizes, width, mobile],
 	);
+
+	// モビールの物理を作る（並びが変わるたびに作り直す）。毎フレーム、糸・横棒・札を描き直す
+	useLayoutEffect(() => {
+		if (!mobileLayout) return;
+		const draw = (pose: MobilePose) => {
+			const f = (v: number) => v.toFixed(2);
+			const line = (el: SVGLineElement | null, a: Pt, b: Pt) => {
+				if (!el) return;
+				el.setAttribute('x1', f(a.x));
+				el.setAttribute('y1', f(a.y));
+				el.setAttribute('x2', f(b.x));
+				el.setAttribute('y2', f(b.y));
+			};
+			pose.threads.forEach((t, i) => {
+				line(threadEls.current[i], t.top, t.hook);
+				line(hookEls.current[i], t.hook, t.foot);
+				const k = knotEls.current[i];
+				if (k) {
+					k.setAttribute('cx', f(t.top.x));
+					k.setAttribute('cy', f(t.top.y));
+				}
+			});
+			pose.bars.forEach(([a, b], i) => line(barEls.current[i], a, b));
+			pose.strings.forEach(([a, b], i) => line(stringEls.current[i], a, b));
+			pose.cards.forEach((p, i) => {
+				const el = cardEls.current[i];
+				const c = mobileLayout.cards[i];
+				if (el) el.style.transform = `translate(${f(p.x - c.w / 2)}px, ${f(p.y - c.h / 2)}px) rotate(${p.a.toFixed(4)}rad)`;
+			});
+		};
+		const sim = new MobileSim(
+			{
+				anchor: { ...mobileLayout.anchor },
+				cards: mobileLayout.cards.map((c) => ({ ...c })),
+				bars: mobileLayout.bars.map((b) => ({ ...b })),
+				// シートの枠（中身の幅と高さ）。札と横棒はこの中に収まる
+				frame: { width, height: mobileLayout.height },
+			},
+			draw,
+		);
+		simRef.current = sim;
+		return () => {
+			sim.destroy();
+			if (simRef.current === sim) simRef.current = null;
+		};
+	}, [mobileLayout, width]);
 	// 枠線（上下 1px ずつ）の分を足す
 	const sheetH = mobileLayout ? Math.min(mobileLayout.height + 2, maxH ?? Infinity) : undefined;
 
@@ -395,7 +508,7 @@ export default function StatementMobile() {
 	useLayoutEffect(() => {
 		const sheet = sheetRef.current;
 		if (!sheet || phaseRef.current === 'closed') return;
-		setGeomAndCard(measureGeom(sheet, offset()));
+		setGeomAndCard(measureGeom(sheet));
 	}, [sheetH, setGeomAndCard]);
 
 	// geom が描き直されたら、今のずれを当て直す
@@ -450,11 +563,11 @@ export default function StatementMobile() {
 		} else {
 			measure();
 			// 閉じきった状態からは、物理を作り直して上から落とす
-			const g = measureGeom(sheet, { x: 0, y: 0 });
+			const g = measureGeom(sheet);
 			if (g) {
 				geomRef.current = g;
 				setGeom(g);
-				cardRef.current = new PinnedCard(g.grommets, g.pegs);
+				cardRef.current = makeCard(g);
 			}
 			dropIn(() => go('open'));
 		}
@@ -476,11 +589,11 @@ export default function StatementMobile() {
 		measure();
 		const sheet = sheetRef.current;
 		sheet?.focus({ preventScroll: true });
-		const g = sheet ? measureGeom(sheet, { x: 0, y: 0 }) : null;
+		const g = sheet ? measureGeom(sheet) : null;
 		if (g) {
 			geomRef.current = g;
 			setGeom(g);
-			cardRef.current = new PinnedCard(g.grommets, g.pegs);
+			cardRef.current = makeCard(g);
 			dropIn(() => {});
 		}
 		// 書体が読み込まれると札の幅が変わる
@@ -604,7 +717,7 @@ export default function StatementMobile() {
 				aria-modal="true"
 				aria-labelledby="statement-title"
 				tabIndex={-1}
-				className="absolute top-[118px] right-[78px] w-[min(724px,calc(100vw-156px))] rounded-[3px] border border-section-line bg-panel outline-none will-change-transform max-md:top-[min(360px,42svh)] max-md:right-[40px] max-md:left-[40px] max-md:w-auto"
+				className="absolute top-[104px] right-[56px] w-[min(1000px,calc(100vw-112px))] rounded-[3px] border border-section-line bg-panel outline-none will-change-transform max-md:top-[min(300px,36svh)] max-md:right-[14px] max-md:left-[14px] max-md:w-auto"
 				style={{ height: sheetH }}
 			>
 				<div
@@ -631,26 +744,48 @@ export default function StatementMobile() {
 							))}
 						</div>
 
+						{/* モビール：糸・横棒・札は MobileSim（planck）が毎フレーム動かす。ここは最初の姿（釣り合わせた配置） */}
 						{mobileLayout && (
-							<svg aria-hidden="true" className="absolute top-0 left-0" width={width} height={mobileLayout.height}>
-								{mobileLayout.threads.map((t, i) => (
-									<g key={`t${i}`}>
-										<line x1={t.x} y1={t.y1} x2={t.x} y2={t.y2} stroke={t.color} strokeWidth={1.6} />
-										{t.knot && <circle cx={t.x} cy={t.y1} r={2.6} fill="var(--color-ink)" />}
-									</g>
-								))}
+							<svg aria-hidden="true" className="absolute top-0 left-0 overflow-visible" width={width} height={mobileLayout.height}>
+								{mobileLayout.threads.map((t, i) => {
+									const b = mobileLayout.bars[i];
+									const top = i === 0 ? mobileLayout.anchor : (() => {
+										const low = mobileLayout.cards[mobileLayout.bars[i - 1].low];
+										return { x: low.x + low.w / 2, y: low.y + low.h };
+									})();
+									return (
+										<g key={`t${i}`}>
+											<line ref={(el) => {
+												threadEls.current[i] = el;
+											}} x1={top.x} y1={top.y} x2={b.hook} y2={b.y - HOOK_UP} stroke={t.color} strokeWidth={1.6} />
+											<line ref={(el) => {
+												hookEls.current[i] = el;
+											}} x1={b.hook} y1={b.y - HOOK_UP} x2={b.hook} y2={b.y} stroke={t.color} strokeWidth={1.6} />
+											{t.knot && <circle ref={(el) => {
+														knotEls.current[i] = el;
+													}} cx={top.x} cy={top.y} r={2.6} fill="var(--color-ink)" />}
+										</g>
+									);
+								})}
 								{mobileLayout.bars.map((b, i) => (
-									<line key={`b${i}`} x1={b.x1} y1={b.y} x2={b.x2} y2={b.y} stroke="var(--color-ink)" strokeWidth={1.5} strokeLinecap="round" />
+									<line key={`b${i}`} ref={(el) => {
+										barEls.current[i] = el;
+									}} x1={b.x1} y1={b.y} x2={b.x2} y2={b.y} stroke="var(--color-ink)" strokeWidth={1.5} strokeLinecap="round" />
 								))}
-								{mobileLayout.cards.map((c) => (
-									<line key={`s${c.id}`} x1={c.x + c.w / 2} y1={c.barY} x2={c.x + c.w / 2} y2={c.y} stroke="var(--color-mute)" strokeWidth={1} />
+								{mobileLayout.cards.map((c, i) => (
+									<line key={`s${c.id}`} ref={(el) => {
+										stringEls.current[i] = el;
+									}} x1={c.x + c.w / 2} y1={c.barY} x2={c.x + c.w / 2} y2={c.y} stroke="var(--color-mute)" strokeWidth={1} />
 								))}
 							</svg>
 						)}
 						<div aria-hidden="true">
-							{mobileLayout?.cards.map((c) => (
+							{mobileLayout?.cards.map((c, i) => (
 								<span
 									key={c.id}
+									ref={(el) => {
+										cardEls.current[i] = el;
+									}}
 									className={`${CARD} ${PHRASES[c.id].latin ? CARD_LATIN : CARD_JA}`}
 									style={{ transform: `translate(${c.x}px, ${c.y}px)` }}
 								>

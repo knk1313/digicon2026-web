@@ -6,6 +6,9 @@
 
 - **Astro ＋ React の island。** 読める内容（展示名、会期、作品名など）は Astro で HTML に出す。吊る・落ちる・結ぶなど動きのある部分だけを React の island にする。
 - **物理と描画は React の外で回す。** 毎フレームの更新は `requestAnimationFrame` と ref で行い、React の再レンダリングに乗せない。計算は `src/lib/` の素の TypeScript にまとめる。
+- **ボードの上の物理は planck.js（Box2D の移植、`planck@1.5.1`）の世界 1 つで動かす。** 吊られた札（HangLayer）とタイトルの文字（HangingTitle）は別々の island だが、`src/lib/physics/board-world.ts` の同じ世界の物体になる。札どうし・札と文字の衝突、ワイヤー（ロープ関節）、つかむ（マウス関節）、ページの端の見えない壁は、すべてこの世界が受け持つ。落ちたものの床は、各節の下端に吊った棚（横長の札）。自前の当たり判定は書かない。
+- **ワイヤーの見た目のうねり**（`cable.ts`、`rope.ts`）は描くためだけのもので、物理には加わらない。
+- **ポップアップ（ステートメントのシート、作品概要のパネル）も planck.js で動かす**（`pinned.ts`）。画面に固定された重ね合わせで、ほかの物とはぶつからないので、ボードの世界には入れず、カードごとに小さな世界を持つ。ワイヤーはロープ関節、つかむのはマウス関節。読むためのカードなので回転は止め、平行に振れるだけにする。
 - **Three.js（React Three Fiber）は使わない。** 3D は不要。依存パッケージに残っているが、消すかどうかは人間が決める。
 - **スクロールは既存の Lenis のまま。**
 - **データは `src/data/demo.json`。** 作品は `categories`（文字列の配列）を持つ。
@@ -19,7 +22,7 @@ src/
   styles/global.css            @theme のトークン、有孔ボードの背景、共通の部品の CSS
   components/
     astro/                     動かない部品（HTML を出すだけ）
-      Section.astro            節の範囲と床の線。data-section を付ける
+      Section.astro            節。data-section を付け、下端に棚（横長の札）を置く
       Plate.astro              札。data-hang（孔の位置）を付ける
       Tape.astro               ラベル
       NavPlate.astro           ナビの札
@@ -32,13 +35,14 @@ src/
       WorkDetail.tsx           作品概要のパネル
   lib/
     board.ts                   孔の格子（間隔・起点）、吸着（snap）、画面幅ごとの値
-    sections.ts                節の範囲と床の位置を測る
     events.ts                  island どうしで使うイベント名と型
     data.ts                    demo.json の型と読み込み
     physics/
-      rope.ts                  ワイヤー（Verlet 積分のロープ）
-      body.ts                  落ちる物体（重力、回転、床との当たり）
-      pendulum.ts              吊られたものの揺れ
+      board-world.ts           planck.js の世界（ページに 1 つ）。札・文字・ページの端の壁・ロープ関節・つかむ
+      glyph.ts                 字形の凸包（文字の当たりの形）
+      cable.ts                 描くためのロープ（結ぶケーブル、札のワイヤーのうねり）
+      rope.ts                  描くためのロープ（タイトルの空のワイヤー）
+      pinned.ts                ポップアップを孔に留めたカードとして落とす（カードごとの小さな planck.js の世界）
 ```
 
 ## 共有する約束事
@@ -81,7 +85,7 @@ island どうしは `window` の CustomEvent で連絡する。
 
 | 属性 | 付ける場所 | 意味 |
 | --- | --- | --- |
-| `data-section="hero"` など | 節の外側 | 節の範囲。床はこの要素の下端から 12px 上 |
+| `data-section="hero"` など | 節の外側 | 節。下端に棚（`data-shelf` の付いた横長の札）を置く |
 | `data-hang="0.18,0.82"` | 吊る要素 | 吊られる側の孔の位置（幅に対する割合） |
 | `data-board` | ページの外側 | 有孔ボード。座標の基準 |
 
@@ -100,7 +104,7 @@ island どうしは `window` の CustomEvent で連絡する。
 | WP2 | ステートメント：言葉のモビールの組み立て、開いた状態で始まる、外を押す・閉じる・Esc で閉じて上へ巻き上げ、フォーカス管理、右上ボタンとの連携 | `components/react/StatementMobile.tsx`、`components/react/StatementButton.tsx` | 完了 |
 | WP3 | 作品：カテゴリーの端子をケーブルでつなぐ、AND の絞り込み、件数のラベル、0件の表示、カードの吊り | `components/react/WorksBoard.tsx` | 完了 |
 | WP4 | 作品概要：パネルを吊って下ろす、閉じて巻き上げ、フォーカスを戻す、前後の作品、クレジット | `components/react/WorkDetail.tsx` | 完了 |
-| WP5 | 仕上げ：スマホの調整、`prefers-reduced-motion`、キーボード操作、揺れ（pendulum） | 各ファイル（担当者と調整） | 未着手 |
+| WP5 | 仕上げ：スマホの調整、`prefers-reduced-motion`、キーボード操作 | 各ファイル（担当者と調整） | 未着手 |
 | WP6 | ダーク版 | `styles/global.css` | 配色が未定 |
 
 ### 受け入れ条件
