@@ -8,7 +8,7 @@
 - **物理と描画は React の外で回す。** 毎フレームの更新は `requestAnimationFrame` と ref で行い、React の再レンダリングに乗せない。計算は `src/lib/` の素の TypeScript にまとめる。
 - **ボードの上の物理は planck.js（Box2D の移植、`planck@1.5.1`）の世界 1 つで動かす。** 吊られた札（HangLayer）とタイトルの文字（HangingTitle）は別々の island だが、`src/lib/physics/board-world.ts` の同じ世界の物体になる。札どうし・札と文字の衝突、ワイヤー（ロープ関節）、つかむ（マウス関節）、ページの端の見えない壁は、すべてこの世界が受け持つ。落ちたものの床は、各節の下端に吊った棚（横長の札）。自前の当たり判定は書かない。
 - **ワイヤーの見た目のうねり**（`cable.ts`、`rope.ts`）は描くためだけのもので、物理には加わらない。
-- **ポップアップ（作品概要のパネル）も planck.js で動かす**（`pinned.ts`）。画面に固定された重ね合わせで、ほかの物とはぶつからないので、ボードの世界には入れず、カードごとに小さな世界を持つ。ワイヤーはロープ関節、つかむのはマウス関節。読むためのカードなので回転は止め、平行に振れるだけにする。
+- **ポップアップ（ステートメントのモーダル、作品概要のパネル）も planck.js で動かす**（`pinned.ts`）。画面に固定された重ね合わせで、ほかの物とはぶつからないので、ボードの世界には入れず、カードごとに小さな世界を持つ。ワイヤーはロープ関節、つかむのはマウス関節。読むためのカードなので回転は止め、平行に振れるだけにする。
 - **Three.js（React Three Fiber）は使わない。** 3D は不要。依存パッケージに残っているが、消すかどうかは人間が決める。
 - **スクロールは既存の Lenis のまま。**
 - **データは `src/data/demo.json`。** 作品は `categories`（文字列の配列）を持つ。
@@ -45,7 +45,7 @@ src/
       StatementButton.tsx      右上の固定ボタン
       WorksBoard.tsx           カテゴリーの面と作品カード、絞り込み
       WorkDetail.tsx           作品概要のパネル
-      pinned/                  孔に留めたポップアップ（WorkDetail）の部品。useModalFocus は StatementModal でも使う
+      pinned/                  孔に留めたポップアップ（StatementModal と WorkDetail）で共通の部品
         PinWires.tsx           ペグ・ワイヤー・吊られる側の孔の SVG
         useGrabCard.ts         マウス・ペンでつかんで揺らす
         useModalFocus.ts       Esc で閉じる、Tab で中を巡る、フォーカスを中に閉じ込める
@@ -125,7 +125,7 @@ island どうしは `window` の CustomEvent で連絡する。
 | --- | --- | --- | --- |
 | WP0 | 土台：トークン、フォント、有孔ボード、節、札、ラベル、静的な吊り（HangLayer）、データの型、全節の静的な中身、ヘッダー、ステートメントボタンの見た目 | `styles/global.css`、`layouts/BaseLayout.astro`、`pages/index.astro`、`components/astro/*`、`components/react/HangLayer.tsx`、`lib/board.ts`、`lib/sections.ts`、`lib/data.ts`、`lib/events.ts`、`data/demo.json` | 完了（タイトルは仮の `components/astro/TitleStatic.astro`。WP1 で置き換える） |
 | WP1 | タイトル：吊られた状態、`statement-closed`（first）で一斉に落ちる、最初の画面の床で止まる、ドラッグとタップ→タップで吊り直す | `components/react/HangingTitle.tsx`、`lib/physics/*` | 完了（`TitleStatic.astro` は使われなくなった。消すかどうかは人間が決める） |
-| WP2 | ステートメント：本文を載せたモーダル、開いた状態で始まる、外を押す・閉じる・Esc で閉じる、フォーカス管理、右上ボタンとの連携 | `components/react/StatementModal.tsx`、`components/react/StatementButton.tsx` | 完了 |
+| WP2 | ステートメント：本文を載せたモーダル、開いた状態で始まる、外を押す・閉じる・Esc で閉じて上へ巻き上げ、フォーカス管理、右上ボタンとの連携 | `components/react/StatementModal.tsx`、`components/react/StatementButton.tsx` | 完了 |
 | WP3 | 作品：カテゴリーの端子をケーブルでつなぐ、AND の絞り込み、件数のラベル、0件の表示、カードの吊り | `components/react/WorksBoard.tsx` | 完了 |
 | WP4 | 作品概要：パネルを吊って下ろす、閉じて巻き上げ、フォーカスを戻す、前後の作品、クレジット | `components/react/WorkDetail.tsx` | 完了 |
 | WP5 | 仕上げ：スマホの調整、`prefers-reduced-motion`、キーボード操作 | 各ファイル（担当者と調整） | 未着手 |
