@@ -1,7 +1,9 @@
 ---
 // ページの上端のヘッダー。ロゴとページ内の移動を横一列に並べる（スマホではロゴと「メニュー」だけ）。
 // 有孔ボード（main[data-board]）の外、その上に置くので、ボードの上の座標（タイトルのペグなど）はずれない。
-// 右端はステートメントのボタンが画面の上端から吊られるので空けておく
+// 右端はステートメントのボタンが画面の上端から吊られるので空けておく。
+// スクロールしても画面の上に残す（sticky）。ボードの中身（main は isolate）より手前、
+// ステートメントのモーダル（z-30）・ボタン（z-40）・作品概要（z-50）より奥に置く
 const items = [
 	{ href: '#theme', label: 'コンセプト' },
 	{ href: '#works', label: '作品' },
@@ -10,7 +12,7 @@ const items = [
 ];
 ---
 
-<header class="border-b border-hair bg-panel text-ink">
+<header class="sticky top-0 z-20 border-b border-hair bg-panel text-ink">
 	<div class="flex h-14 items-center gap-10 px-[60px] pr-[200px] max-md:gap-6 max-md:px-[26px] max-md:pr-[150px]">
 		<a href="#" class="font-label text-[12px] font-bold tracking-wider">DIGICON 2026</a>
 		<nav aria-label="ページ内の移動">

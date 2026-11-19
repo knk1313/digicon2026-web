@@ -23,7 +23,8 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 
 <BaseLayout title={site.title}>
 	<Header />
-	<main data-board class="relative overflow-hidden bg-board text-ink font-body">
+	<!-- isolate：ボードの中の z-index（作品カードなど）を中に閉じ込め、上に固定したヘッダーより前に出さない -->
+	<main data-board class="relative isolate overflow-hidden bg-board text-ink font-body">
 		<!-- ① 最初の画面 -->
 		<!--
 			タイトル（文字は絶対配置で、下端が 450px ほど）の下に、2 枚の札を流れで並べる。
