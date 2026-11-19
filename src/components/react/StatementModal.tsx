@@ -1,6 +1,6 @@
 // ステートメントのモーダル。画面の中央にパネルを出し、本文をふつうの文章として載せる。
 // ページを開いた直後は開いた状態で始まる（docs/design/rules.md の ①）。
-// 外を押す・「閉じる ×」・Esc で閉じる。閉じたことはイベントで HangingTitle と StatementButton に伝える
+// 外を押す・右上のボタン（開いているあいだ「閉じる ×」になる）・Esc で閉じる。閉じたことはイベントで HangingTitle と StatementButton に伝える
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { site, splitStatement } from '../../lib/data';
 import { EVENTS, emit, on, type StatementClosedDetail } from '../../lib/events';
@@ -56,6 +56,8 @@ export default function StatementModal() {
 
 	// 右上のボタンや「ステートメントを読む」から開く
 	useEffect(() => on(EVENTS.statementOpen, show), [show]);
+	// 開いているあいだ「閉じる」になった右上のボタンから閉じる
+	useEffect(() => on(EVENTS.statementClose, close), [close]);
 
 	// Esc で閉じる。Tab はパネルの中で回す
 	useModalFocus({ active: open, containerRef: panelRef, fallbackRef: panelRef, onEscape: close, isClosing: () => !openRef.current });
@@ -79,20 +81,12 @@ export default function StatementModal() {
 				tabIndex={-1}
 				className="relative flex max-h-[min(86svh,860px)] w-[min(680px,100%)] flex-col rounded-[4px] border border-section-line bg-panel outline-none"
 			>
-				<div className="flex items-start justify-between gap-4 border-b border-hair px-10 pt-8 pb-5 max-md:px-5 max-md:pt-6">
-					<div>
-						<p className="font-label text-[12px] text-mute">ステートメント</p>
-						<h2 id="statement-title" className="mt-2 font-display text-[30px] font-black leading-tight max-md:text-[22px]">
-							{site.theme.title}
-						</h2>
-					</div>
-					<button
-						type="button"
-						onClick={close}
-						className="chip shrink-0 cursor-pointer py-[4px] text-[11px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-					>
-						閉じる <span aria-hidden="true">×</span>
-					</button>
+				{/* 閉じるボタンは置かない。右上の固定ボタンが開いているあいだ「閉じる ×」になる（StatementButton） */}
+				<div className="border-b border-hair px-10 pt-8 pb-5 max-md:px-5 max-md:pt-6">
+					<p className="font-label text-[12px] text-mute">ステートメント</p>
+					<h2 id="statement-title" className="mt-2 font-display text-[30px] font-black leading-tight max-md:text-[22px]">
+						{site.theme.title}
+					</h2>
 				</div>
 
 				<div className="overflow-y-auto overscroll-contain px-10 pt-6 pb-10 font-statement text-[17px] leading-[2.1] max-md:px-5 max-md:text-[15px]">

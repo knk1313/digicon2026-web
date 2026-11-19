@@ -1,4 +1,5 @@
-// 右上に固定した「ステートメント」ボタン。押すとシートを開く合図を出す。
+// 右上に固定した「ステートメント」ボタン。押すとモーダルを開く合図を出す。
+// モーダルが開いているあいだは「閉じる」になり、押すと閉じる合図を出す。
 // 見た目は docs/design/components.md の StatementButton。開閉は StatementModal とイベントで連携する
 import { useEffect, useState } from 'react';
 import { KAWARU, TSUNAGU, UMARERU } from '../../lib/colors';
@@ -28,7 +29,7 @@ export default function StatementButton() {
 				type="button"
 				aria-haspopup="dialog"
 				aria-expanded={pressed}
-				onClick={() => emit(EVENTS.statementOpen)}
+				onClick={() => emit(pressed ? EVENTS.statementClose : EVENTS.statementOpen)}
 				className={`relative -mt-[9px] flex cursor-pointer items-center gap-2 rounded-md border-2 border-ink px-3 pt-4 pb-2 font-label text-[13px] font-bold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink max-md:text-[11px] ${pressed ? 'bg-ink text-board' : 'bg-panel text-ink'}`}
 			>
 				{/* 吊られる側の孔 */}
@@ -40,7 +41,13 @@ export default function StatementButton() {
 					<rect x="7.5" y="14" width="5" height="4" rx="1" fill={pressed ? KAWARU : ink} />
 					<rect x="13.5" y="8" width="5" height="4" rx="1" fill={pressed ? UMARERU : ink} />
 				</svg>
-				ステートメント
+				{pressed ? (
+					<>
+						閉じる <span aria-hidden="true">×</span>
+					</>
+				) : (
+					'ステートメント'
+				)}
 			</button>
 		</div>
 	);

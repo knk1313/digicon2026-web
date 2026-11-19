@@ -100,6 +100,7 @@ island どうしは `window` の CustomEvent で連絡する。
 | 名前 | 送る側 | 受ける側 | 意味 |
 | --- | --- | --- | --- |
 | `digicon:statement-open` | StatementButton | StatementModal | ステートメントを開く |
+| `digicon:statement-close` | StatementButton | StatementModal | ステートメントを閉じる（開いているあいだ「閉じる」になったボタンから） |
 | `digicon:statement-closed` | StatementModal | HangingTitle、StatementButton | ステートメントが閉じた（`detail.first` が true なら最初の1回） |
 | `digicon:work-open` | WorksBoard | WorkDetail | 作品概要を開く（`detail.id`） |
 | `digicon:layout` | HangLayer | だれでも | レイアウトが変わり、孔や床の位置を測り直した |

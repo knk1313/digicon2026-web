@@ -3,6 +3,8 @@
 export const EVENTS = {
 	/** シートを開く */
 	statementOpen: 'digicon:statement-open',
+	/** ステートメントを閉じる（右上のボタンから） */
+	statementClose: 'digicon:statement-close',
 	/** シートが閉じた。detail.first が true なら最初の1回 */
 	statementClosed: 'digicon:statement-closed',
 	/** 作品概要を開く。detail.id */
