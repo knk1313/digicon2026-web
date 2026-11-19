@@ -15,6 +15,8 @@ import { site, allCategories, formatPeriod, splitStatement } from '../lib/data';
 
 const period = formatPeriod(site.period);
 const categories = allCategories(site.works);
+/** X のアカウント名（URL の最後の部分） */
+const xHandle = site.x.split('/').filter(Boolean).pop();
 const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 ---
 
@@ -38,7 +40,7 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 			<Plate class="ml-auto px-7 pt-8 pb-6 text-right max-md:ml-0 max-md:text-left">
 				<p class="font-display text-[clamp(40px,5vw,64px)] font-black leading-none tracking-tight whitespace-nowrap max-md:text-[27px]">{period}</p>
 				<p class="mt-4 text-[22px] font-medium max-md:text-[16px]">{site.venue}</p>
-				<p class="mt-2 font-label text-[13px] text-mute">時間・X アカウント（未定）</p>
+				<p class="mt-2 font-label text-[13px] text-mute">時間（未定）・<a href={site.x} target="_blank" rel="noopener noreferrer" class="underline">X @{xHandle}</a></p>
 			</Plate>
 		</Section>
 
@@ -78,7 +80,7 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 						<dt class="font-label text-mute">会場</dt><dd>{site.venue}</dd>
 						<dt class="font-label text-mute">時間</dt><dd>未定</dd>
 						<dt class="font-label text-mute">行き方</dt><dd>未定</dd>
-						<dt class="font-label text-mute">お知らせ</dt><dd>X アカウント（未定）</dd>
+						<dt class="font-label text-mute">お知らせ</dt><dd><a href={site.x} target="_blank" rel="noopener noreferrer" class="underline">X @{xHandle}</a></dd>
 					</dl>
 				</Plate>
 				<Plate class="col-span-full px-4 pt-7 pb-4">
