@@ -1,5 +1,5 @@
 // 右上に固定した「ステートメント」ボタン。押すとシートを開く合図を出す。
-// 見た目は docs/design/components.md の StatementButton。開閉は StatementMobile とイベントで連携する
+// 見た目は docs/design/components.md の StatementButton。開閉は StatementModal とイベントで連携する
 import { useEffect, useState } from 'react';
 import { KAWARU, TSUNAGU, UMARERU } from '../../lib/colors';
 import { EVENTS, emit, on } from '../../lib/events';

@@ -8,7 +8,7 @@ import NavPlate from '../components/astro/NavPlate.astro';
 import HangingTitle from '../components/react/HangingTitle';
 import HangLayer from '../components/react/HangLayer';
 import StatementButton from '../components/react/StatementButton';
-import StatementMobile from '../components/react/StatementMobile';
+import StatementModal from '../components/react/StatementModal';
 import WorksBoard from '../components/react/WorksBoard';
 import WorkDetail from '../components/react/WorkDetail';
 import { site, allCategories, formatPeriod, splitStatement } from '../lib/data';
@@ -110,7 +110,7 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 		<HangLayer client:only="react" />
 	</main>
 	<StatementButton client:only="react" />
-	<StatementMobile client:only="react" />
+	<StatementModal client:only="react" />
 	<!-- 作品概要のパネル（WP4）。digicon:work-open で開く -->
 	<WorkDetail client:only="react" />
 
