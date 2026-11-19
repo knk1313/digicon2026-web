@@ -1,6 +1,6 @@
 // 板の孔に留めたカード（lib/physics/pinned.ts の PinnedCard）の、ペグ・ワイヤー・吊られる側の孔を描く SVG。
 // React は最初の形を置くだけで、動いているあいだの形は drawPinWires が毎フレーム書き換える。
-// 作品概要のパネル（WorkDetail）で使う
+// 作品概要のパネル（WorkDetail）とステートメントのモーダル（StatementModal）で使う
 import type { Ref } from 'react';
 import type { Pt } from '../../../lib/physics/cable';
 
