@@ -145,7 +145,7 @@ export default function WorkDetail() {
 				scrimRef01.current = 1;
 			} else {
 				// 少し横にずらして落とすと、受け止められたあとに振れる
-				const side = (Math.random() < 0.5 ? -1 : 1) * (36 + Math.random() * 40);
+				const side = (Math.random() < 0.5 ? -1 : 1) * (16 + Math.random() * 20);
 				card.drop(liftRef.current, side);
 			}
 		}

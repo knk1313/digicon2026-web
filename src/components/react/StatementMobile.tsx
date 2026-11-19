@@ -188,7 +188,7 @@ export default function StatementMobile() {
 				return;
 			}
 			// 少し横にずらして落とすと、受け止められたあとに振れる
-			const side = (Math.random() < 0.5 ? -1 : 1) * (30 + Math.random() * 36);
+			const side = (Math.random() < 0.5 ? -1 : 1) * (14 + Math.random() * 16);
 			// シートの高さが決まる前でも画面の外から落ちるよう、少なくとも画面の高さぶん上から
 			card.drop(Math.max(g.maxLift, window.innerHeight), side);
 			apply();

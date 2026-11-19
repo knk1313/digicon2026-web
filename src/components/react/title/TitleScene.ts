@@ -5,7 +5,7 @@ import { MOBILE_MAX, gridFor, snapX, snapYAbove, type BoardGrid } from '../../..
 import { EVENTS, on, type StatementClosedDetail } from '../../../lib/events';
 import { clamp } from '../../../lib/math';
 import { reducedMotion } from '../../../lib/motion';
-import { GRAVITY_PX, boardWorld, m, tagOf, toM, toPx, touchingSolid } from '../../../lib/physics/board-world';
+import { GRAVITY_PX, boardWorld, capVelocity, m, tagOf, toM, toPx, touchingSolid } from '../../../lib/physics/board-world';
 import { stepWire, wireCable } from '../../../lib/physics/cable';
 import { glyphShape, type GlyphShape, type Vec } from '../../../lib/physics/glyph';
 import { Rope } from '../../../lib/physics/rope';
@@ -19,6 +19,8 @@ import {
 	NEAR_RADIUS,
 	REEL_RATE,
 	ROWS,
+	SNAP_KICK,
+	THROW_MAX_SPEED,
 	TITLE_LAYOUT,
 	TITLE_PEG_GAP,
 	type TitleLayout,
@@ -346,7 +348,7 @@ export class TitleScene {
 		// 切れたワイヤーの先だけが、縮みながら上へ跳ねる
 		const scale = this.layout.size / 96;
 		for (const l of this.letters) {
-			if (l.hang) this.unhang(l, instant ? 0 : 520 * scale);
+			if (l.hang) this.unhang(l, instant ? 0 : SNAP_KICK * scale);
 			l.body.setAwake(true);
 			setLetterInteractive(l, true);
 		}
@@ -589,8 +591,9 @@ export class TitleScene {
 		const l = d.letter;
 		l.hit.style.cursor = 'pointer';
 		const target = e.type === 'pointercancel' ? null : this.dragTarget(l);
-		// 離すと、つかんでいた速さのまま投げられる（物理のまま）。回転の減り方は元に戻す
+		// 離すと、つかんでいた速さのまま投げられる（物理のまま）。ただし速さには上限をかける。回転の減り方は元に戻す
 		this.world.release();
+		capVelocity(l.body, THROW_MAX_SPEED, DRAG_MAX_SPIN);
 		l.body.setAngularDamping(LETTER_ANGULAR_DAMPING);
 		if (target) this.hangOn(l, target);
 		drawPreview(this.preview, null, { x: 0, y: 0 }, '');

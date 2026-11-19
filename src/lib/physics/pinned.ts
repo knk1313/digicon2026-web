@@ -9,12 +9,19 @@
 // DOM には触らず、位置（静止した位置からのずれ）と、描くためのワイヤーの形だけを返す
 import { Box, MouseJoint, RopeJoint, Vec2, World, type Body } from 'planck';
 import { stepWire, wireCable, type Cable, type Pt } from './cable';
-import { GRAVITY_PX, SCALE, m, toM, toPx } from './board-world';
+import { GRAVITY_PX, SCALE, capVelocity, m, toM, toPx } from './board-world';
 
 export type PinnedPhase = 'falling' | 'hanging' | 'lifting' | 'gone';
 
 /** 1 刻みの時間。step() 1 回（1 フレーム）で 2 刻み進める */
 const STEP = 1 / 120;
+/** ワイヤーに受け止められたあとの揺れの減り方。大きいほど早く止まる */
+const HANG_DAMPING = 3.4;
+/** つかんでいるとき、ワイヤーが元の長さからこれだけ（px）まで伸びる */
+const HOLD_STRETCH = 160;
+/** 離したときの速さの上限（px/秒、ラジアン/秒）。投げ出されて大きく振れないように */
+const RELEASE_MAX_SPEED = 450;
+const RELEASE_MAX_SPIN = 2.5;
 
 interface Wire {
 	peg: Pt;
@@ -58,7 +65,7 @@ export class PinnedCard {
 			position: toM(this.home),
 			fixedRotation: !rect,
 			linearDamping: 1.1,
-			angularDamping: 3,
+			angularDamping: 4,
 		});
 		// 形は重さと回りにくさを決めるだけ（ほかの物とはぶつからない）。原点は最初の孔なので、外形の中心へずらして置く
 		if (rect) {
@@ -112,12 +119,12 @@ export class PinnedCard {
 		const b = this.body;
 		// 引き上げの途中なら、いまの位置からそのまま落とす
 		if (this.phase !== 'lifting') {
-			// 斜めに傾け、回りながら勢いよく落ちてくる（受け止められると 2 本のワイヤーで水平に戻る）
-			const tilt = (side >= 0 ? -1 : 1) * (0.18 + Math.random() * 0.14);
+			// 少し傾けて落とす（受け止められると 2 本のワイヤーで水平に戻る）
+			const tilt = (side >= 0 ? -1 : 1) * (0.08 + Math.random() * 0.08);
 			b.setTransform(toM({ x: this.home.x + side, y: this.home.y - above }), tilt);
 			// 最初から勢いを付けて落とす（のんびり落ちてこないように）
-			b.setLinearVelocity(Vec2(m(-side * 1.5), m(1500)));
-			b.setAngularVelocity(-tilt * 2.5);
+			b.setLinearVelocity(Vec2(m(-side * 0.8), m(1500)));
+			b.setAngularVelocity(-tilt * 1.5);
 		} else {
 			b.setLinearVelocity(Vec2(0, 0));
 		}
@@ -181,6 +188,7 @@ export class PinnedCard {
 		if (!this.mouse) return;
 		this.world.destroyJoint(this.mouse);
 		this.mouse = null;
+		capVelocity(this.body, RELEASE_MAX_SPEED, RELEASE_MAX_SPIN);
 	}
 	get held(): boolean {
 		return this.mouse !== null;
@@ -201,15 +209,16 @@ export class PinnedCard {
 				// 落ちているあいだ（孔がペグより上）は空気抵抗をほぼなくし、受け止めたあとは揺れを早めに収める（数秒以内）
 				const below = this.wires.every((w) => toPx(b.getWorldPoint(toM(w.local))).y >= w.peg.y);
 				// 強くしすぎると、引っぱって離したときにのろのろ戻る。ばねのように戻って、数回振れて止まるくらい
-				b.setLinearDamping(below ? 2.4 : 0.05);
+				b.setLinearDamping(below ? HANG_DAMPING : 0.05);
 				// 落ちているあいだ（ペグより上）は重力を強くして、すばやく下りてくる。受け止められたら元の重力
 				b.setGravityScale(below ? 1 : 2.2);
 				for (const w of this.wires) {
 					const end = toPx(b.getWorldPoint(toM(w.local)));
 					const d = Math.hypot(end.x - w.peg.x, end.y - w.peg.y);
 					if (this.mouse) {
-						// つかんでいるあいだはロープで引かない（どれだけ速く引いても、ぐいっと伸びる）。離すと、そのときの長さから巻き戻す
-						this.setLen(w, 100000);
+						// つかんでいるあいだはワイヤーが伸びる。ただし HOLD_STRETCH まで（画面の端まで引っぱれない）。離すと、そのときの長さから巻き戻す。
+						// 落ちている途中でつかんだときは、いまの距離より短くして急に引き戻さないよう、近づいた分だけ縮めていく
+						this.setLen(w, Math.max(w.L + HOLD_STRETCH, Math.min(w.cur, d + 4)));
 					} else if (this.phase === 'falling' && end.y < w.peg.y) {
 						// ペグより上：たるんでいる
 						this.setLen(w, Math.max(w.L, d + 4));

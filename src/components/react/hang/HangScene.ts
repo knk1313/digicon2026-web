@@ -3,7 +3,7 @@
 import { gridFor, type BoardGrid } from '../../../lib/board';
 import { EVENTS, on } from '../../../lib/events';
 import { reducedMotion } from '../../../lib/motion';
-import { SCALE, boardWorld, toM, toPx } from '../../../lib/physics/board-world';
+import { SCALE, boardWorld, capVelocity, toM, toPx } from '../../../lib/physics/board-world';
 import { stepWire, wireCable, type Pt } from '../../../lib/physics/cable';
 import { svg } from '../../../lib/svg';
 import { nearestHole, readHangSpec } from './measure';
@@ -14,6 +14,14 @@ import { buildEntryEls, createHolePreview, drawWire, movePegEls, nearWires, plac
 const NO_DRAG = '[data-no-drag], [data-jack], input, textarea, select, [contenteditable]';
 /** これより動いたら、クリックではなくドラッグとみなす */
 const DRAG_THRESHOLD = 6;
+/** つかんでいるとき、ワイヤーが元の長さからこれだけ（px）まで伸びる。それより遠くへは引っぱれない */
+const HOLD_STRETCH = 140;
+/** 離したときの速さの上限（px/秒、ラジアン/秒）。投げ出されて吹っ飛ばないように */
+const RELEASE_MAX_SPEED = 450;
+const RELEASE_MAX_SPIN = 3;
+/** スクロールで振れる速さ：スクロール量に掛ける割合と、振れる速さの上限（px/秒） */
+const SCROLL_SWAY_RATE = 0.12;
+const SCROLL_SWAY_MAX = 8;
 
 export class HangScene {
 	private entries: Entry[] = [];
@@ -154,13 +162,13 @@ export class HangScene {
 					body.setLinearVelocity(carry.v);
 					body.setAngularVelocity(carry.w);
 				} else if (this.ready && !el.hasAttribute('data-shelf') && !reducedMotion()) {
-					// 初めて出てくる札は、上から斜めに傾いて勢いよく落ちてきて、ワイヤーに受け止められる
-					const side = (Math.random() - 0.5) * 120;
-					const lift = 180 + Math.random() * 120;
-					const tilt = (Math.random() < 0.5 ? -1 : 1) * (0.22 + Math.random() * 0.25);
+					// 初めて出てくる札は、上から少し傾いて落ちてきて、ワイヤーに受け止められる
+					const side = (Math.random() - 0.5) * 50;
+					const lift = 100 + Math.random() * 60;
+					const tilt = (Math.random() < 0.5 ? -1 : 1) * (0.08 + Math.random() * 0.1);
 					body.setTransform(toM({ x: home.x + side, y: home.y - lift }), tilt);
-					body.setLinearVelocity({ x: (-side * 2.2) / SCALE, y: 260 / SCALE });
-					body.setAngularVelocity(-tilt * 4);
+					body.setLinearVelocity({ x: (-side * 1.2) / SCALE, y: 160 / SCALE });
+					body.setAngularVelocity(-tilt * 2);
 				}
 				if (carry || (this.ready && !el.hasAttribute('data-shelf'))) {
 					// ワイヤーはいまの距離より少し長くしておき（たるんで受け止める）、beforeStep で元の長さへ巻き戻す
@@ -287,7 +295,7 @@ export class HangScene {
 		const old = e.ropes[index];
 		if (!old) return;
 		this.world.destroyJoint(old);
-		e.ropes[index] = this.world.createRope(e.body, p, e.holes[index], e.free ? 100000 : e.cur[index]);
+		e.ropes[index] = this.world.createRope(e.body, p, e.holes[index], e.free ? Math.max(e.lengths[index] + HOLD_STRETCH, e.cur[index]) : e.cur[index]);
 		// 描くためのワイヤーはこの点を参照しているので、同じ点を書き換える
 		e.pegs[index].x = p.x;
 		e.pegs[index].y = p.y;
@@ -334,7 +342,7 @@ export class HangScene {
 	/** ドラッグ・ペグ選びの状態をすべて解く（取りこぼしの後始末） */
 	private releaseAll(): void {
 		this.ptr = null;
-		if (this.held) this.world.release();
+		if (this.held) this.releaseHeld(this.held.entry);
 		this.held = null;
 		this.pending = null;
 		this.pegDrag = null;
@@ -397,12 +405,18 @@ export class HangScene {
 		const h = this.held;
 		if (!h || h.id !== e.pointerId) return;
 		this.held = null;
-		this.world.release();
+		this.releaseHeld(h.entry);
 		document.documentElement.style.userSelect = '';
 		document.documentElement.style.cursor = '';
 		// ドラッグのあとの click は、リンクやカードを開かない
 		this.suppressClick = true;
 		setTimeout(() => (this.suppressClick = false), 0);
+	}
+
+	/** つかんでいた札を離す。勢いよく振り回していても、投げ出されないよう速さを抑える */
+	private releaseHeld(e: Entry): void {
+		this.world.release();
+		capVelocity(e.body, RELEASE_MAX_SPEED, RELEASE_MAX_SPIN);
 	}
 
 	/** スクロールの量に応じて、ごくわずかに左右へ振る（気づくか気づかないか程度） */
@@ -413,12 +427,15 @@ export class HangScene {
 		if (!dy || reducedMotion()) return;
 		const vh = window.innerHeight;
 		const b = this.boardRect();
-		const v = Math.min(Math.abs(dy) * 0.3, 18) / SCALE;
+		const cap = SCROLL_SWAY_MAX / SCALE;
+		const v = Math.min(Math.abs(dy) * SCROLL_SWAY_RATE, SCROLL_SWAY_MAX) / SCALE;
 		for (const e of this.entries) {
 			const top = e.home.y + b.top;
 			if (top < -vh || top > vh * 2) continue;
 			const cur = e.body.getLinearVelocity();
-			e.body.setLinearVelocity({ x: cur.x + e.dir * v, y: cur.y });
+			// 速くスクロールし続けても積み重ならないよう、スクロールで足す速さは上限まで
+			if (Math.abs(cur.x) >= cap) continue;
+			e.body.setLinearVelocity({ x: Math.max(-cap, Math.min(cap, cur.x + e.dir * v)), y: cur.y });
 			e.body.setAwake(true);
 		}
 		this.world.kick();
@@ -441,9 +458,12 @@ export class HangScene {
 				const w = toPx(e.body.getWorldPoint(toM(e.holes[i])));
 				const d = Math.hypot(w.x - e.pegs[i].x, w.y - e.pegs[i].y);
 				if (holding) {
-					// つかんでいるあいだはロープで引かない（どれだけ速く引いても、ぐいっと伸びる）。長さは見た目と巻き戻しのために覚えておく
-					if (!e.free) rope.setMaxLength(100000 / SCALE);
-					e.cur[i] = Math.max(L, d);
+					// つかんでいるあいだはワイヤーが伸びる。ただし HOLD_STRETCH まで（どこまでも引っぱって吹っ飛ばさない）。
+					// 落ちてくる途中でつかんだときは、いまの距離より短くして急に引き戻さないよう、近づいた分だけ縮めていく。
+					// cur は見た目と巻き戻しのために覚えておく長さ
+					const lim = Math.max(L + HOLD_STRETCH, Math.min(rope.getMaxLength() * SCALE, d + 4));
+					rope.setMaxLength(lim / SCALE);
+					e.cur[i] = Math.min(lim, Math.max(L, d));
 				} else if (e.free || e.cur[i] > L) {
 					// 離したら、いまの長さから元の長さへ巻き戻す（戻りながら揺れる）
 					const base = Math.min(e.cur[i], d + 1);

@@ -14,6 +14,10 @@ export const NEAR_RADIUS = 46;
 /** つまんでいる文字の回転の減り方と、回る速さの上限（ラジアン/秒）。重心から外れた点をつまんでも、ぐるぐる回り続けない */
 export const DRAG_ANGULAR_DAMPING = 9;
 export const DRAG_MAX_SPIN = 6;
+/** つまんでいた文字を離したときの速さの上限（px/秒）。投げても画面の外まで吹っ飛ばないように */
+export const THROW_MAX_SPEED = 700;
+/** 一斉に落ちるとき、切れたワイヤーの先が跳ねる強さ（文字の大きさ 96px のとき） */
+export const SNAP_KICK = 300;
 /** ふだんの回転の減り方（board-world.ts の createPolygon と同じ） */
 export const LETTER_ANGULAR_DAMPING = 0.6;
 
