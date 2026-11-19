@@ -1,6 +1,7 @@
 // 右上に固定した「ステートメント」ボタン。押すとシートを開く合図を出す。
 // 見た目は docs/design/components.md の StatementButton。開閉は StatementMobile とイベントで連携する
 import { useEffect, useState } from 'react';
+import { KAWARU, TSUNAGU, UMARERU } from '../../lib/colors';
 import { EVENTS, emit, on } from '../../lib/events';
 
 export default function StatementButton() {
@@ -35,9 +36,9 @@ export default function StatementButton() {
 				{/* 小さなモビールの絵。押された状態では札が段階色になる */}
 				<svg aria-hidden="true" width="20" height="18" viewBox="0 0 20 18">
 					<path d="M10 0 L10 4 M2 4 L18 4 M4 4 L4 10 M10 4 L10 14 M16 4 L16 8" stroke={ink} strokeWidth="1.6" fill="none" strokeLinecap="round" />
-					<rect x="1.5" y="10" width="5" height="4" rx="1" fill={pressed ? 'var(--color-tsunagu)' : ink} />
-					<rect x="7.5" y="14" width="5" height="4" rx="1" fill={pressed ? 'var(--color-kawaru)' : ink} />
-					<rect x="13.5" y="8" width="5" height="4" rx="1" fill={pressed ? 'var(--color-umareru)' : ink} />
+					<rect x="1.5" y="10" width="5" height="4" rx="1" fill={pressed ? TSUNAGU : ink} />
+					<rect x="7.5" y="14" width="5" height="4" rx="1" fill={pressed ? KAWARU : ink} />
+					<rect x="13.5" y="8" width="5" height="4" rx="1" fill={pressed ? UMARERU : ink} />
 				</svg>
 				ステートメント
 			</button>
