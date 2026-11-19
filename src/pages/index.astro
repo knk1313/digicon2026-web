@@ -5,6 +5,7 @@ import Section from '../components/astro/Section.astro';
 import Plate from '../components/astro/Plate.astro';
 import Tape from '../components/astro/Tape.astro';
 import Header from '../components/astro/Header.astro';
+import Footer from '../components/astro/Footer.astro';
 import HangingTitle from '../components/react/HangingTitle';
 import HangLayer from '../components/react/HangLayer';
 import StatementButton from '../components/react/StatementButton';
@@ -89,28 +90,9 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 			</div>
 		</Section>
 
-		<!-- ⑤ アーカイブとクレジット -->
-		<Section name="archive" id="archive" label="アーカイブとクレジット">
-			<div class="grid grid-cols-2 gap-x-[40px] gap-y-[84px] max-md:grid-cols-1 max-md:gap-y-[64px]">
-				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
-					<Tape>アーカイブ</Tape>
-					<ul class="mt-5 flex flex-wrap gap-2">
-						{['2025', '2024', '2023', '2022'].map((y) => <li><span class="chip">{y} →</span></li>)}
-					</ul>
-				</Plate>
-				<Plate class="px-8 pt-9 pb-7 max-md:px-5">
-					<Tape>クレジット</Tape>
-					<p class="mt-5 text-[14px] text-mute">サイト制作：（未定）</p>
-				</Plate>
-			</div>
-		</Section>
-
-		<footer class="px-[60px] pt-6 pb-10 font-label text-[12px] text-mute max-md:px-[26px]">
-			© 2026 筑波大学 情報メディア創成学類 ディジタルコンテンツ表現実習
-		</footer>
-
 		<HangLayer client:only="react" />
 	</main>
+	<Footer />
 	<StatementButton client:only="react" />
 	<StatementModal client:only="react" />
 	<!-- 作品概要のパネル（WP4）。digicon:work-open で開く -->

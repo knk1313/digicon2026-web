@@ -26,6 +26,7 @@ src/
       Plate.astro              札。data-hang（孔の位置）を付ける
       Tape.astro               ラベル
       Header.astro             ページの最上部のヘッダー（ロゴとナビ）
+      Footer.astro             ページの最下部のフッター（アーカイブ、クレジット、著作権の表記）
     react/                     island（.tsx は React の器。中身は同じ名前のフォルダに分ける）
       HangLayer.tsx            data-hang の付いた要素を、板のペグからワイヤーで吊る
       hang/
