@@ -26,23 +26,48 @@ src/
       Plate.astro              札。data-hang（孔の位置）を付ける
       Tape.astro               ラベル
       NavPlate.astro           ナビの札
-    react/                     island
-      HangLayer.tsx            data-hang の付いた要素を測り、ペグ・ワイヤー・吊られる側の孔を描く
+    react/                     island（.tsx は React の器。中身は同じ名前のフォルダに分ける）
+      HangLayer.tsx            data-hang の付いた要素を、板のペグからワイヤーで吊る
+      hang/
+        measure.ts             data-hang の要素を測り、ペグ・孔・静止した位置を決める
+        HangScene.ts           札の物理と操作（つかむ、ペグの挿し替え、スクロールの揺れ）
+        view.ts                ペグ・ワイヤー・吊られる側の孔の SVG と、札の transform
+        types.ts               型
       HangingTitle.tsx         吊られたタイトル（吊る→落ちる→着地→吊り直す）
-      StatementMobile.tsx      ステートメントのシート（言葉のモビール）
+      title/
+        TitleScene.ts          文字の物理と操作（吊る・外す・巻き上げ、つまむ、ワイヤーを伸ばす）
+        view.ts                文字・ペグ・ワイヤー・吊り先の下見の SVG
+        config.ts              配置と手触りの値
+        hull.ts                字形の外形（凸多角形）の計算
+        types.ts               型
+      StatementMobile.tsx      ステートメントのシート（開閉と吊り方）
+      statement/
+        WordMobile.tsx         言葉のモビールの描画と揺れ（MobileSim）、札の大きさを測る複製
       StatementButton.tsx      右上の固定ボタン
       WorksBoard.tsx           カテゴリーの面と作品カード、絞り込み
       WorkDetail.tsx           作品概要のパネル
+      pinned/                  孔に留めたポップアップ（StatementMobile と WorkDetail）で共通の部品
+        PinWires.tsx           ペグ・ワイヤー・吊られる側の孔の SVG
+        useGrabCard.ts         マウス・ペンでつかんで揺らす
+        useModalFocus.ts       Esc で閉じる、Tab で中を巡る、フォーカスを中に閉じ込める
   lib/
     board.ts                   孔の格子（間隔・起点）、吸着（snap）、画面幅ごとの値
     events.ts                  island どうしで使うイベント名と型
     data.ts                    demo.json の型と読み込み
+    statement-mobile.ts        言葉のモビールの組み立て（句の並びと、釣り合った配置の計算）
+    colors.ts                  段階色（つなぐ・かわる・うまれる）
+    focus.ts                   Tab で巡る要素、つかまない要素のセレクタ
+    math.ts                    clamp、点と線分の距離
+    motion.ts                  動きを減らす設定（prefers-reduced-motion）を読む
+    scroll-lock.ts             モーダルを開いているあいだ、ページのスクロールを止める
+    svg.ts                     React を通さずに SVG を組み立てる道具
     physics/
       board-world.ts           planck.js の世界（ページに 1 つ）。札・文字・ページの端の壁・ロープ関節・つかむ
       glyph.ts                 字形の凸包（文字の当たりの形）
       cable.ts                 描くためのロープ（結ぶケーブル、札のワイヤーのうねり）
       rope.ts                  描くためのロープ（タイトルの空のワイヤー）
       pinned.ts                ポップアップを孔に留めたカードとして落とす（カードごとの小さな planck.js の世界）
+      mobile-sim.ts            言葉のモビールの物理（横棒と札、糸のロープ関節）
 ```
 
 ## 共有する約束事
