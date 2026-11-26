@@ -10,29 +10,28 @@ import { GROMMET_OFFSET, MIN_DROP, gridFor, snapX, snapYAbove } from '../../lib/
 import { site } from '../../lib/data';
 import { EVENTS, on, type WorkOpenDetail } from '../../lib/events';
 import { PinnedCard } from '../../lib/physics/pinned';
+import { reducedMotion } from '../../lib/motion';
+import PinWires, { drawPinWires, type PinGeom } from './pinned/PinWires';
+import { useGrabCard } from './pinned/useGrabCard';
+import { useModalFocus } from './pinned/useModalFocus';
 
 /** 吊られる側の孔の位置（パネルの幅に対する割合）。札の既定と同じ */
 const HANG = [0.18, 0.82];
 /** 幕が出る・消える速さ（1 フレームで残りの何割を詰めるか） */
 const SCRIM_RATE = 0.12;
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
-/** つかまない要素 */
-const NO_DRAG = 'a, button, input, select, textarea, [contenteditable]';
 
 /** ペグとワイヤーの位置。座標はオーバーレイの中身の左上から（パネルが下りきった状態） */
-interface Geo {
+interface Geo extends PinGeom {
+	/** オーバーレイの中身の大きさ（SVG の大きさ） */
 	width: number;
 	height: number;
-	xs: number[];
-	pegY: number;
-	holeY: number;
-	peg: number;
-	grommet: number;
-	wire: number;
 }
 
-function reducedMotion(): boolean {
-	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/** 吊り方（ペグと孔の位置）が同じか */
+function sameHang(a: PinGeom, b: PinGeom): boolean {
+	const same = (p: { x: number; y: number }[], q: { x: number; y: number }[]) =>
+		p.length === q.length && p.every((v, i) => v.x === q[i].x && v.y === q[i].y);
+	return same(a.pegs, b.pegs) && same(a.grommets, b.grommets);
 }
 
 export default function WorkDetail() {
@@ -62,8 +61,6 @@ export default function WorkDetail() {
 	const returnRef = useRef<HTMLElement | null>(null);
 	/** 外で押し始めたか（パネルの中で押してから外で離したときは閉じない） */
 	const downOutsideRef = useRef(false);
-	/** つかみ始めの候補（6px 動いたらつかむ） */
-	const pendingRef = useRef<{ id: number; x: number; y: number } | null>(null);
 
 	const index = workId ? site.works.findIndex((w) => w.id === workId) : -1;
 	const work = index >= 0 ? site.works[index] : null;
@@ -77,18 +74,8 @@ export default function WorkDetail() {
 		if (!card) return;
 		const o = card.offset;
 		if (panelRef.current) panelRef.current.style.transform = `translate3d(${o.x.toFixed(2)}px, ${o.y.toFixed(2)}px, 0) rotate(${card.angle.toFixed(4)}rad)`;
-		const svg = svgRef.current;
-		if (!svg) return;
-		const strings = card.strings();
-		svg.querySelectorAll<SVGPathElement>('[data-wire]').forEach((p, i) => strings[i] && p.setAttribute('d', strings[i].path));
-		svg.querySelectorAll<SVGCircleElement>('[data-grommet]').forEach((c, i) => {
-			if (!strings[i]) return;
-			c.setAttribute('cx', strings[i].end.x.toFixed(2));
-			c.setAttribute('cy', strings[i].end.y.toFixed(2));
-		});
 		// ペグは幕と一緒に現れ、一緒に消える
-		const pegs = svg.querySelector<SVGGElement>('[data-pegs]');
-		if (pegs) pegs.style.opacity = String(scrimRef01.current);
+		drawPinWires(svgRef.current, card.strings(), scrimRef01.current);
 	}, []);
 
 	/** 物理を回す。止まったら止める */
@@ -127,9 +114,8 @@ export default function WorkDetail() {
 		const g: Geo = {
 			width: content.offsetWidth,
 			height: content.scrollHeight,
-			xs,
-			pegY,
-			holeY,
+			pegs: xs.map((x) => ({ x, y: pegY })),
+			grommets: xs.map((x) => ({ x, y: holeY })),
 			peg: grid.peg,
 			grommet: grid.grommet,
 			wire: grid.wire,
@@ -137,13 +123,9 @@ export default function WorkDetail() {
 		liftRef.current = top + panel.offsetHeight + 40;
 		// 吊り方が変わったときだけ物理を作り直す（前後の作品へ移っても揺れを引き継ぐ）
 		const old = geoRef.current;
-		if (!cardRef.current || !old || old.pegY !== pegY || old.holeY !== holeY || old.xs.some((x, i) => x !== xs[i])) {
+		if (!cardRef.current || !old || !sameHang(old, g)) {
 			// 外形を渡すと、傾いて落ちてきて水平に戻る（回す中心は最初の孔）
-			const card = new PinnedCard(
-				xs.map((x) => ({ x, y: holeY })),
-				xs.map((x) => ({ x, y: pegY })),
-				{ x: left, y: top, w, h: panel.offsetHeight },
-			);
+			const card = new PinnedCard(g.grommets, g.pegs, { x: left, y: top, w, h: panel.offsetHeight });
 			panel.style.transformOrigin = `${xs[0] - left}px ${holeY - top}px`;
 			if (cardRef.current && cardRef.current.phase !== 'gone') card.place();
 			cardRef.current = card;
@@ -163,7 +145,7 @@ export default function WorkDetail() {
 				scrimRef01.current = 1;
 			} else {
 				// 少し横にずらして落とすと、受け止められたあとに振れる
-				const side = (Math.random() < 0.5 ? -1 : 1) * (36 + Math.random() * 40);
+				const side = (Math.random() < 0.5 ? -1 : 1) * (16 + Math.random() * 20);
 				card.drop(liftRef.current, side);
 			}
 		}
@@ -244,90 +226,34 @@ export default function WorkDetail() {
 		apply();
 	}, [geo, apply]);
 
-	// 開いているあいだ：Esc で閉じる、Tab でパネルの中を巡る、画面の大きさが変わったら測り直す、マウスでつかむ
+	// 開いているあいだ：Esc で閉じる。Tab でパネルの中を巡り、外へ出たフォーカスは閉じるボタンへ戻す
+	useModalFocus({
+		active: mounted,
+		containerRef: panelRef,
+		fallbackRef: closeRef,
+		onEscape: close,
+		isClosing: () => closingRef.current,
+	});
+
+	// 開いているあいだ：パネルをマウスでつかんで揺らせる（座標はオーバーレイの中身の左上から）
+	useGrabCard({
+		active: mounted,
+		cardRef,
+		areaRef: panelRef,
+		toLocal: (x, y) => {
+			const r = contentRef.current!.getBoundingClientRect();
+			return { x: x - r.left, y: y - r.top };
+		},
+		run,
+		isClosing: () => closingRef.current,
+	});
+
+	// 開いているあいだ：画面の大きさが変わったら測り直す
 	useEffect(() => {
 		if (!mounted) return;
-		const onKey = (e: KeyboardEvent) => {
-			if (closingRef.current) return;
-			if (e.key === 'Escape') {
-				e.preventDefault();
-				close();
-				return;
-			}
-			if (e.key !== 'Tab' || !panelRef.current) return;
-			const items = [...panelRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)];
-			if (items.length === 0) return;
-			const first = items[0];
-			const last = items[items.length - 1];
-			const active = document.activeElement;
-			if (e.shiftKey && (active === first || !panelRef.current.contains(active))) {
-				e.preventDefault();
-				last.focus();
-			} else if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) {
-				e.preventDefault();
-				first.focus();
-			}
-		};
-		// パネルの外へフォーカスが出たら（ほかの島のボタンなど）、中へ戻す
-		const onFocusIn = (e: FocusEvent) => {
-			if (closingRef.current || !panelRef.current) return;
-			if (!panelRef.current.contains(e.target as Node)) closeRef.current?.focus({ preventScroll: true });
-		};
-		const onResize = () => measure();
-		// 中身の座標での指の位置
-		const local = (e: PointerEvent) => {
-			const r = contentRef.current!.getBoundingClientRect();
-			return { x: e.clientX - r.left, y: e.clientY - r.top };
-		};
-		const onDown = (e: PointerEvent) => {
-			if (e.button !== 0 || e.pointerType === 'touch' || closingRef.current) return;
-			const t = e.target as Element | null;
-			if (!t || !panelRef.current?.contains(t) || t.closest(NO_DRAG)) return;
-			pendingRef.current = { id: e.pointerId, x: e.clientX, y: e.clientY };
-		};
-		const onMove = (e: PointerEvent) => {
-			const p = pendingRef.current;
-			const card = cardRef.current;
-			if (!card) return;
-			if (p && p.id === e.pointerId && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 6) {
-				pendingRef.current = null;
-				const r = contentRef.current!.getBoundingClientRect();
-				card.hold({ x: p.x - r.left, y: p.y - r.top });
-				document.documentElement.style.userSelect = 'none';
-				window.getSelection()?.removeAllRanges();
-			}
-			if (card.held) {
-				card.move(local(e));
-				run();
-			}
-		};
-		const onUp = (e: PointerEvent) => {
-			if (pendingRef.current?.id === e.pointerId) pendingRef.current = null;
-			const card = cardRef.current;
-			if (card?.held) {
-				card.release();
-				document.documentElement.style.userSelect = '';
-				run();
-			}
-		};
-		document.addEventListener('keydown', onKey);
-		document.addEventListener('focusin', onFocusIn);
-		window.addEventListener('resize', onResize);
-		window.addEventListener('pointerdown', onDown);
-		window.addEventListener('pointermove', onMove);
-		window.addEventListener('pointerup', onUp);
-		window.addEventListener('pointercancel', onUp);
-		return () => {
-			document.removeEventListener('keydown', onKey);
-			document.removeEventListener('focusin', onFocusIn);
-			window.removeEventListener('resize', onResize);
-			window.removeEventListener('pointerdown', onDown);
-			window.removeEventListener('pointermove', onMove);
-			window.removeEventListener('pointerup', onUp);
-			window.removeEventListener('pointercancel', onUp);
-			document.documentElement.style.userSelect = '';
-		};
-	}, [mounted, close, measure, run]);
+		window.addEventListener('resize', measure);
+		return () => window.removeEventListener('resize', measure);
+	}, [mounted, measure]);
 
 	if (!mounted || !work) return null;
 
@@ -426,52 +352,7 @@ export default function WorkDetail() {
 				</section>
 
 				{/* ペグ → ワイヤー → 吊られる側の孔。パネルより手前に描き、クリックは下に通す。形は毎フレーム書き換える */}
-				{geo && (
-					<svg
-						ref={svgRef}
-						aria-hidden="true"
-						className="pointer-events-none absolute top-0 left-0 overflow-visible"
-						width={geo.width}
-						height={geo.height}
-					>
-						{geo.xs.map((x) => (
-							<path
-								key={`w${x}`}
-								data-wire
-								fill="none"
-								stroke="var(--color-wire)"
-								strokeWidth={geo.wire}
-								strokeLinecap="round"
-								strokeLinejoin="round"
-							/>
-						))}
-						<g data-pegs>
-							{geo.xs.map((x) => (
-								<circle
-									key={`p${x}`}
-									cx={x}
-									cy={geo.pegY}
-									r={geo.peg / 2}
-									fill="var(--color-peg)"
-									stroke="var(--color-peg)"
-									strokeWidth={1.5}
-								/>
-							))}
-						</g>
-						{geo.xs.map((x) => (
-							<circle
-								key={`g${x}`}
-								data-grommet
-								cx={x}
-								cy={geo.holeY}
-								r={geo.grommet / 2}
-								fill="var(--color-board)"
-								stroke="var(--color-ink)"
-								strokeWidth={1.5}
-							/>
-						))}
-					</svg>
-				)}
+				{geo && <PinWires ref={svgRef} className="pointer-events-none absolute top-0 left-0 overflow-visible" {...geo} />}
 			</div>
 		</div>,
 		document.body,

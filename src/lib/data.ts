@@ -17,6 +17,8 @@ export interface Site {
 	period: { start: string; end: string };
 	theme: { title: string; statement: string };
 	venue: string;
+	/** お知らせを出す X アカウントの URL */
+	x: string;
 	works: Work[];
 }
 

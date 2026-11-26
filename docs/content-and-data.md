@@ -10,6 +10,7 @@
 | 会期 | `period` | 開始日と終了日 |
 | テーマ | `theme` | 文字列 |
 | 会場 | `venue` | 名前 |
+| X アカウント | `x` | URL（`https://x.com/itf_digicon2026`） |
 | 授業の紹介 | `about` | 文章 |
 
 ### 作品ごとの情報

@@ -43,6 +43,8 @@ html {
   background: var(--color-board);
   color: var(--color-ink);
   font-family: var(--font-body);
+  /* ページ内リンクで移動した先が、上に固定したヘッダー（高さ 56px）に隠れないように */
+  scroll-padding-top: 56px;
 }
 
 /* ページ全体の有孔ボード。孔の中心が (ox + step*n, oy + step*m) に来るよう背景をずらす */

@@ -10,14 +10,14 @@ CSS では `src/styles/global.css` の `@theme` に入れる。変数名は下�
 | --- | --- | --- |
 | `--color-board` | `#ECEDEA` | 地（有孔ボード） |
 | `--color-hole` | `#CDD1CD` | 板の孔 |
-| `--color-panel` | `#FFFFFF` | 札、カード、シートの面 |
+| `--color-panel` | `#FFFFFF` | 札、カード、モーダルの面 |
 | `--color-ink` | `#151718` | 文字、札の枠線、吊られる側の孔の縁 |
 | `--color-mute` | `#5E6560` | 補足の文字 |
 | `--color-hair` | `#D6D9D5` | 細い区切り、サムネイルの仮の面 |
 | `--color-wire` | `#2A2D2F` | 吊っているワイヤー |
 | `--color-wire-loose` | `#6A7073` | 何も吊っていないワイヤー |
 | `--color-peg` | `#1A1C1D` | ペグの頭（消えている） |
-| `--color-section-line` | `#BFC3BE` | ステートメントのシートと句の札の枠線（もとは節の範囲の線。範囲の線はやめた） |
+| `--color-section-line` | `#BFC3BE` | ステートメントのモーダルの枠線（もとは節の範囲の線。範囲の線はやめた） |
 | `--color-tsunagu` | `#F2B705` | 段階色：つなぐ（タイトル1段目、結んだケーブル） |
 | `--color-kawaru` | `#1F6FD6` | 段階色：かわる（タイトル2段目） |
 | `--color-umareru` | `#E5392B` | 段階色：うまれる（タイトル3段目） |

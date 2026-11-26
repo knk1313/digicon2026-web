@@ -59,6 +59,18 @@ export const px = (meters: number) => meters * SCALE;
 export const toM = (p: Pt) => Vec2(p.x / SCALE, p.y / SCALE);
 export const toPx = (v: { x: number; y: number }): Pt => ({ x: v.x * SCALE, y: v.y * SCALE });
 
+/**
+ * 物体の速さに上限をかける。maxSpeed は px/秒、maxSpin はラジアン/秒。
+ * つかんで勢いよく離したときに、投げ出されて吹っ飛ばないようにする
+ */
+export function capVelocity(b: Body, maxSpeed: number, maxSpin: number): void {
+	const v = b.getLinearVelocity();
+	const speed = Math.hypot(v.x, v.y) * SCALE;
+	if (speed > maxSpeed) b.setLinearVelocity(Vec2((v.x * maxSpeed) / speed, (v.y * maxSpeed) / speed));
+	const w = b.getAngularVelocity();
+	if (Math.abs(w) > maxSpin) b.setAngularVelocity(Math.sign(w) * maxSpin);
+}
+
 // 眠る判定：画面で 2px/秒・1.5°/秒より遅い揺れが 0.4 秒続いたら眠らせる。
 // 既定（0.5px/秒）のままだと、短いワイヤーの札が目に見えない小さな揺れを続けて、いつまでも計算が止まらない
 Settings.linearSleepTolerance = 2 / SCALE;
@@ -138,9 +150,9 @@ class BoardWorld {
 		const body = this.world.createBody({
 			type: 'dynamic',
 			position: toM(c),
-			// 大きく引いて離しても、数秒で揺れが収まるくらい
-			linearDamping: 1.1,
-			angularDamping: 2.4,
+			// 大きく引いて離しても、2 秒ほどで揺れが収まるくらい
+			linearDamping: 1.8,
+			angularDamping: 3.5,
 			userData: tag,
 		});
 		body.createFixture(new Box(m(w) / 2, m(h) / 2), { density: 1, friction: 0.45, restitution: 0.05 });

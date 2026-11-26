@@ -11,6 +11,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import type { Work } from '../../lib/data';
 import { EVENTS, emit, type WorkOpenDetail } from '../../lib/events';
 import { Cable, type Pt } from '../../lib/physics/cable';
+import { TSUNAGU } from '../../lib/colors';
+import { reducedMotion } from '../../lib/motion';
 
 interface Props {
 	works: Work[];
@@ -23,8 +25,6 @@ interface Pair {
 	b: string;
 }
 
-/** つないでいるときのペグ・ケーブルの色（段階色の「つなぐ」） */
-const TSUNAGU = 'var(--color-tsunagu)';
 /** ドラッグ中、端子の縁からこの距離（px）以内のいちばん近い端子を相手にする（tie.js と同じ） */
 const NEAR_RADIUS = 46;
 /** これより動いたら、タップではなくドラッグとみなす */
@@ -57,10 +57,6 @@ function slackFor(p: Pt, q: Pt, maxY: number, want: number): number {
 	const room = maxY - Math.max(p.y, q.y);
 	if (room <= 0) return 1.005;
 	return Math.max(1.005, Math.min(want, 1 + (8 * room * room) / (3 * d * d)));
-}
-
-function reducedMotion(): boolean {
-	return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
 // カテゴリーの言葉の大きさ。Figma の面のように、少しずつ大きさを変えて散らす
