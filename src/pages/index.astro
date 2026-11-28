@@ -28,20 +28,25 @@ const firstStanza = splitStatement(site.theme.statement)[0] ?? [];
 		<!-- ① 最初の画面 -->
 		<!--
 			タイトル（文字は絶対配置で、下端が 450px ほど）の下に、2 枚の札を流れで並べる。
-			幅が足りなければ開催情報の札は次の行へ回り、右に寄ったまま（札どうしが重ならない）
+			幅が足りなければ開催情報の札は次の行へ回り、右に寄ったまま（札どうしが重ならない）。
+			PC では高さを「画面の高さ − ヘッダー（57px）」にし、札を下へ寄せて、下端の棚が画面の下端にちょうど来るようにする。
+			画面が低くて中身が入らないときは、そのぶん伸びる（タイトルと札は重ねない）。
+			上の余白 460px は、タイトルの下端（450px ほど）のすぐ下。下の余白 92px は、棚を吊るペグ（棚の上端から 24〜58px 上）が札の下端に重ならない分
 		-->
-		<Section name="hero" label="最初の画面" flush class="relative flex flex-wrap items-start gap-x-12 gap-y-10 min-h-[826px] px-[80px] pt-[540px] pb-[110px] max-md:flex-col max-md:flex-nowrap max-md:gap-y-14 max-md:min-h-0 max-md:px-[26px] max-md:pt-[372px] max-md:pb-[190px]">
+		<Section name="hero" label="最初の画面" flush class="relative flex flex-wrap items-start content-end gap-x-12 gap-y-10 min-h-[calc(100svh-57px)] px-[80px] pt-[460px] pb-[92px] max-md:flex-col max-md:flex-nowrap max-md:gap-y-14 max-md:min-h-0 max-md:px-[26px] max-md:pt-[372px] max-md:pb-[190px]">
 			<h1 class="sr-only">{site.title} つなぐ、かわる、うまれる</h1>
 			<HangingTitle client:only="react" />
 
-			<Plate class="px-6 pt-7 pb-5">
-				<Tape>ディジタルコンテンツ表現実習 2026年度 制作展</Tape>
-				<p class="mt-3 text-[17px] font-medium max-md:text-[15px]">メディアを通じて、新しい関係と世界をつくる</p>
+			<!-- 作品への入口。件数はデータから出す -->
+			<Plate class="max-w-[520px] px-6 pt-7 pb-5">
+				<Tape>出展作品</Tape>
+				<p class="mt-3 font-display text-[40px] font-black leading-none max-md:text-[30px]">{site.works.length}<span class="ml-1 text-[17px] font-medium max-md:text-[15px]">作品</span></p>
+				<a href="#works" class="chip mt-5 bg-ink! text-panel!">作品を見る →</a>
 			</Plate>
 
-			<Plate class="ml-auto px-7 pt-8 pb-6 text-right max-md:ml-0 max-md:text-left">
+			<Plate class="ml-auto px-7 pt-7 pb-5 text-right max-md:ml-0 max-md:text-left">
 				<p class="font-display text-[clamp(40px,5vw,64px)] font-black leading-none tracking-tight whitespace-nowrap max-md:text-[27px]">{period}</p>
-				<p class="mt-4 text-[22px] font-medium max-md:text-[16px]">{site.venue}</p>
+				<p class="mt-3 text-[22px] font-medium max-md:text-[16px]">{site.venue}</p>
 				<p class="mt-2 font-label text-[13px] text-mute">時間（未定）・<a href={site.x} target="_blank" rel="noopener noreferrer" class="underline">X @{xHandle}</a></p>
 			</Plate>
 		</Section>
