@@ -32,6 +32,11 @@ const DRAG_THRESHOLD = 6;
 /** ケーブルのたるみ（tie.js と同じ）。引いている最中は少し張る */
 const SLACK = 1.12;
 const PULL_SLACK = 1.04;
+/**
+ * つないだケーブルの揺れの収まり方。減衰が弱く反復が少ないと、重力と長さの補正が毎フレーム
+ * 引っ張り合って細かく震え続けるので、減衰を強め、反復を増やして早く静止させる
+ */
+const TIED = { damp: 0.9, iters: 30 };
 /** ケーブルの最下点は、面の下端からこれより上に収める（下端の状態の行と重ねない） */
 const SAG_FLOOR = 52;
 
@@ -198,7 +203,7 @@ export default function WorksBoard({ works, categories }: Props) {
 	const connect = (x: string, y: string, from?: Cable) => {
 		if (x === y || hasPair(x, y)) return;
 		const pair = makePair(x, y);
-		const k = new Cable(anchor(pair.a), anchor(pair.b), { slack: SLACK });
+		const k = new Cable(anchor(pair.a), anchor(pair.b), { slack: SLACK, ...TIED });
 		if (from) {
 			// 引いていたケーブルは x → 指先。向きをそろえて写す
 			const src = pair.a === x ? from.pts : [...from.pts].reverse();
